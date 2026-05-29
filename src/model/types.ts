@@ -8,9 +8,15 @@ export interface ProfileSpec {
   name: string;
   family: string;
   source: string;
+  partNumber?: string;
+  sourceUrl?: string;
+  system?: "metric" | "inch";
+  construction?: "solid" | "hollow";
+  texture?: "smooth" | "grooved";
   widthMm: number;
   heightMm: number;
   slotMm: number;
+  slotDepthMm?: number;
   areaMm2: number;
   iVerticalMm4: number;
   iLateralMm4: number;

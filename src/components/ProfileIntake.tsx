@@ -68,7 +68,20 @@ export function ProfileIntake({
       </div>
 
       <div className="source-stack">
-        <span>{activeProfile.widthMm} x {activeProfile.heightMm} mm</span>
+        {activeProfile.partNumber && activeProfile.sourceUrl ? (
+          <a href={activeProfile.sourceUrl} target="_blank" rel="noreferrer">
+            McMaster {activeProfile.partNumber}
+          </a>
+        ) : null}
+        <span>{formatMm(activeProfile.widthMm)} x {formatMm(activeProfile.heightMm)} mm</span>
+        {activeProfile.construction ? <span>{activeProfile.construction}</span> : null}
+        {activeProfile.texture ? <span>{activeProfile.texture}</span> : null}
+        <span>
+          {activeProfile.slotMm.toFixed(activeProfile.slotMm % 1 ? 1 : 0)} mm slot
+          {activeProfile.slotDepthMm
+            ? ` / ${activeProfile.slotDepthMm.toFixed(activeProfile.slotDepthMm % 1 ? 1 : 0)} mm deep`
+            : ""}
+        </span>
         <span>{activeProfile.massKgM.toFixed(2)} kg/m</span>
         <span>{activeProfile.source}</span>
       </div>
@@ -85,4 +98,8 @@ export function ProfileIntake({
       )}
     </PanelSection>
   );
+}
+
+function formatMm(value: number) {
+  return Number(value.toFixed(value % 1 ? 1 : 0));
 }

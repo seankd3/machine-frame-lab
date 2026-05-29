@@ -16,7 +16,7 @@ import { readSharedDesign } from "./model/share";
 import type { MachineScenario, ProfileSpec } from "./model/types";
 
 const initialScenario: MachineScenario = {
-  profileId: profiles[2].id,
+  profileId: "tslot-4080-heavy",
   spanMm: 1100,
   support: "fixed-fixed",
   axis: "vertical",

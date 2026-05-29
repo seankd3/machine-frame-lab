@@ -329,6 +329,7 @@ input[type="range"] {
 }
 
 .source-stack span,
+.source-stack a,
 .evidence-list span {
   padding: 5px 7px;
   border: 1px solid #34362f;
@@ -336,6 +337,11 @@ input[type="range"] {
   color: #bbb7aa;
   background: #11120f;
   font-size: 0.74rem;
+}
+
+.source-stack a {
+  color: #63d7c1;
+  text-decoration: none;
 }
 
 .evidence-list span {
