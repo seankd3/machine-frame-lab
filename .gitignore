@@ -1,0 +1,7 @@
+dist/
+node_modules/
+*.png
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
+.DS_Store
