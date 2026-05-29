@@ -4,7 +4,22 @@ Dark industrial web app for comparing aluminum extrusion machine-frame recipes w
 
 ## Share It
 
-The app builds to plain static files, so the easiest friend link is:
+The app builds to plain static files. It is configured for GitHub Pages from `main` `/docs`, so the friend link is:
+
+```txt
+https://sean-kenneth-doherty.github.io/machine-frame-lab/
+```
+
+If you need to refresh the hosted files manually:
+
+```sh
+npm run build:pages
+git add docs
+git commit -m "Update hosted build"
+git push
+```
+
+For Netlify, Vercel, or Cloudflare Pages:
 
 1. Run `npm install && npm run build`.
 2. Upload the `dist/` folder to Netlify Drop, Vercel, Cloudflare Pages, or GitHub Pages.
