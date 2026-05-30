@@ -1,4 +1,5 @@
 import type { ProfileSpec } from "../model/types";
+import profileSheetUrl from "../assets/8020-Fractional-Profiles-1.svg";
 
 export type ProfileShape = "single" | "double" | "triple" | "quad" | "double-quad";
 
@@ -7,12 +8,24 @@ interface ProfileGlyphProps {
   className?: string;
 }
 
+const sheet = {
+  width: 448.91787,
+  height: 228.88645,
+};
+
+const sourceProfiles = {
+  compact: { viewBox: "14 99 117 115", aspect: 1 },
+  heavy: { viewBox: "226 46 169 168", aspect: 1 },
+};
+
 export function ProfileGlyph({ shape, className }: ProfileGlyphProps) {
   const cells = cellLayout(shape);
-  const cellSize = 28;
-  const gap = 2;
-  const width = cells.cols * cellSize + (cells.cols - 1) * gap + 20;
-  const height = cells.rows * cellSize + (cells.rows - 1) * gap + 20;
+  const cellSize = shape === "quad" || shape === "double-quad" ? 58 : 54;
+  const gap = 4;
+  const padding = 4;
+  const width = cells.cols * cellSize + (cells.cols - 1) * gap + padding * 2;
+  const height = cells.rows * cellSize + (cells.rows - 1) * gap + padding * 2;
+  const source = shape === "quad" || shape === "double-quad" ? sourceProfiles.heavy : sourceProfiles.compact;
 
   return (
     <svg
@@ -23,34 +36,15 @@ export function ProfileGlyph({ shape, className }: ProfileGlyphProps) {
     >
       {Array.from({ length: cells.rows }).flatMap((_, row) =>
         Array.from({ length: cells.cols }).map((__, col) => (
-          <Cell
+          <SourceProfile
             key={`${row}-${col}`}
-            x={10 + col * (cellSize + gap)}
-            y={10 + row * (cellSize + gap)}
+            source={source}
+            x={padding + col * (cellSize + gap)}
+            y={padding + row * (cellSize + gap)}
             size={cellSize}
           />
         )),
       )}
-      {shape === "quad" || shape === "double-quad" ? (
-        <rect
-          className="profile-glyph-void"
-          x={width / 2 - cellSize * 0.58}
-          y={height / 2 - cellSize * 0.58}
-          width={cellSize * 1.16}
-          height={cellSize * 1.16}
-          rx="4"
-        />
-      ) : null}
-      {shape === "double-quad" ? (
-        <rect
-          className="profile-glyph-void"
-          x={width / 2 - cellSize * 0.5}
-          y={height / 2 - cellSize * 1.32}
-          width={cellSize}
-          height={cellSize * 2.64}
-          rx="5"
-        />
-      ) : null}
     </svg>
   );
 }
@@ -58,7 +52,7 @@ export function ProfileGlyph({ shape, className }: ProfileGlyphProps) {
 export function HeightGlyph() {
   return (
     <svg className="height-glyph" viewBox="0 0 68 54" role="img" aria-label="Rail height">
-      <Cell x={7} y={9} size={32} />
+      <SourceProfile source={sourceProfiles.compact} x={7} y={9} size={32} />
       <line x1="52" y1="9" x2="52" y2="41" />
       <path d="M 47 14 L 52 9 L 57 14" />
       <path d="M 47 36 L 52 41 L 57 36" />
@@ -87,29 +81,43 @@ export function shapeLabel(shape: ProfileShape) {
   return labels[shape];
 }
 
-function Cell({ x, y, size }: { x: number; y: number; size: number }) {
-  const center = x + size / 2;
-  const mid = y + size / 2;
-  const slot = size * 0.17;
-
+function SourceProfile({
+  source,
+  x,
+  y,
+  size,
+}: {
+  source: { viewBox: string; aspect: number };
+  x: number;
+  y: number;
+  size: number;
+}) {
   return (
-    <g className="profile-glyph-cell">
-      <rect x={x + 3} y={y + 3} width={size - 6} height={size - 6} rx="4" />
-      <circle cx={center} cy={mid} r={size * 0.16} />
-      <path d={`M ${x + 6} ${y + 6} L ${center} ${mid} L ${x + size - 6} ${y + 6}`} />
-      <path d={`M ${x + 6} ${y + size - 6} L ${center} ${mid} L ${x + size - 6} ${y + size - 6}`} />
-      <path d={`M ${center - slot} ${y + 3} H ${center + slot}`} />
-      <path d={`M ${center - slot} ${y + size - 3} H ${center + slot}`} />
-      <path d={`M ${x + 3} ${mid - slot} V ${mid + slot}`} />
-      <path d={`M ${x + size - 3} ${mid - slot} V ${mid + slot}`} />
-    </g>
+    <svg
+      className="profile-source-crop"
+      x={x}
+      y={y}
+      width={size * source.aspect}
+      height={size}
+      viewBox={source.viewBox}
+      preserveAspectRatio="xMidYMid meet"
+    >
+      <image
+        className="profile-source-image"
+        href={profileSheetUrl}
+        x="0"
+        y="0"
+        width={sheet.width}
+        height={sheet.height}
+      />
+    </svg>
   );
 }
 
 function cellLayout(shape: ProfileShape) {
   if (shape === "double") return { cols: 1, rows: 2 };
   if (shape === "triple") return { cols: 1, rows: 3 };
-  if (shape === "quad") return { cols: 2, rows: 2 };
-  if (shape === "double-quad") return { cols: 2, rows: 4 };
+  if (shape === "quad") return { cols: 1, rows: 1 };
+  if (shape === "double-quad") return { cols: 1, rows: 2 };
   return { cols: 1, rows: 1 };
 }

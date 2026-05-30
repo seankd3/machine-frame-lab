@@ -430,9 +430,9 @@ input[type="range"] {
 }
 
 .shape-tile {
-  min-height: 94px;
+  min-height: 108px;
   display: grid;
-  grid-template-rows: 58px auto;
+  grid-template-rows: 70px auto;
   place-items: center;
   gap: 5px;
   padding: 8px 5px;
@@ -459,26 +459,22 @@ input[type="range"] {
 
 .profile-glyph {
   width: 100%;
-  height: 56px;
+  height: 68px;
 }
 
-.profile-glyph-cell rect,
-.profile-glyph-cell circle,
-.profile-glyph-cell path,
-.profile-glyph-void,
-.height-glyph .profile-glyph-cell rect,
-.height-glyph .profile-glyph-cell circle,
-.height-glyph .profile-glyph-cell path {
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 2.2;
+.profile-source-crop {
+  overflow: hidden;
 }
 
-.profile-glyph-void {
-  fill: #0b0c0a;
-  stroke-width: 1.8;
+.profile-source-image {
+  filter: brightness(0) invert(90%) contrast(118%) drop-shadow(0 0 2px rgba(245, 243, 234, 0.2));
+  opacity: 0.94;
+}
+
+.shape-tile.active .profile-source-image,
+.shape-tile.hinted .profile-source-image {
+  filter: brightness(0) invert(98%) contrast(122%) drop-shadow(0 0 2px rgba(245, 243, 234, 0.3));
+  opacity: 1;
 }
 
 .system-toggle,

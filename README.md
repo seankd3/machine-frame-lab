@@ -37,3 +37,7 @@ Then open `http://192.168.1.72:5173` from another device on the same network.
 ## Notes
 
 Seed profiles approximate common McMaster-style T-slot framing dimensions. Replace them with verified McMaster drawing or CAD mass properties before making purchase or safety decisions.
+
+## Visual Sources
+
+Profile picker artwork is adapted from Wikimedia Commons `8020-Fractional-Profiles-1.svg`, licensed under CC BY-SA 3.0. The app crops and recolors the 1.00" and 1.50" fractional profile drawings for compact UI selection icons; these are visual references, not McMaster-Carr drawings.
