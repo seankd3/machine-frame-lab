@@ -2,10 +2,10 @@ import { getFill } from "../data/materials";
 import { getRail } from "../data/rails";
 import type { MachineScenario, ProfileSpec } from "../model/types";
 import {
-  profileCellLayout,
   ProfileSourceCrop,
   profileShape,
   profileSourceForShape,
+  type ProfileShape,
 } from "./ProfileGlyph";
 
 interface CadProfileCutawayProps {
@@ -17,21 +17,17 @@ const view = { width: 420, height: 320 };
 
 export function CadProfileCutaway({ profile, scenario }: CadProfileCutawayProps) {
   const shape = profileShape(profile);
-  const cells = profileCellLayout(shape);
   const source = profileSourceForShape(shape);
   const rail = getRail(scenario.rail.modelId);
   const fill = getFill(scenario.fill.mediumId);
   const hasRails = rail.id !== "none";
-  const maxCell = cells.rows > 2 ? 78 : 104;
-  const cellSize = Math.min(maxCell, 218 / cells.rows);
-  const gap = Math.max(2.5, cellSize * 0.035);
-  const drawingW = cells.cols * cellSize + (cells.cols - 1) * gap;
-  const drawingH = cells.rows * cellSize + (cells.rows - 1) * gap;
+  const drawingFrame = fitProfile(profile.widthMm / profile.heightMm, 210, 226);
+  const drawingW = drawingFrame.width;
+  const drawingH = drawingFrame.height;
   const drawingX = 146 - drawingW / 2;
   const drawingY = 58 + (226 - drawingH) / 2;
-  const moduleWidthMm = profile.widthMm / cells.cols;
-  const pxPerMm = cellSize / moduleWidthMm;
-  const railW = clamp(rail.widthMm * pxPerMm, 30, cellSize * 0.86);
+  const pxPerMm = drawingW / profile.widthMm;
+  const railW = clamp(rail.widthMm * pxPerMm, 30, drawingW * 0.7);
   const railH = clamp(rail.heightMm * pxPerMm, 12, 32);
   const topRails = hasRails ? railPositions(scenario.rail.topCount, drawingW, railW) : [];
   const sideRails = hasRails ? railPositions(scenario.rail.sideCount, drawingH, railW) : [];
@@ -50,41 +46,30 @@ export function CadProfileCutaway({ profile, scenario }: CadProfileCutawayProps)
 
       <rect className="cad-plate" x="22" y="22" width="246" height="270" />
       <g className="cad-fill-set" opacity={fillOpacity}>
-        {Array.from({ length: cells.rows }).flatMap((_, row) =>
-          Array.from({ length: cells.cols }).map((__, col) => {
-            const x = drawingX + col * (cellSize + gap) + cellSize * cavityInset;
-            const y = drawingY + row * (cellSize + gap) + cellSize * cavityInset;
-            const size = cellSize * (1 - cavityInset * 2);
-
-            return (
-              <rect
-                key={`${row}-${col}`}
-                className={`cad-fill fill-${fill.id}`}
-                x={x}
-                y={y}
-                width={size}
-                height={size}
-                rx="4"
-              />
-            );
-          }),
+        {fillCavities(shape, drawingX, drawingY, drawingW, drawingH, cavityInset).map(
+          (cavity, index) => (
+            <rect
+              key={index}
+              className={`cad-fill fill-${fill.id}`}
+              x={cavity.x}
+              y={cavity.y}
+              width={cavity.width}
+              height={cavity.height}
+            />
+          ),
         )}
       </g>
 
       <g className="cad-profile-stack">
-        {Array.from({ length: cells.rows }).flatMap((_, row) =>
-          Array.from({ length: cells.cols }).map((__, col) => (
-            <ProfileSourceCrop
-              key={`${row}-${col}`}
-              source={source}
-              x={drawingX + col * (cellSize + gap)}
-              y={drawingY + row * (cellSize + gap)}
-              size={cellSize}
-              className="cad-profile-source"
-              imageClassName="cad-profile-image"
-            />
-          )),
-        )}
+        <ProfileSourceCrop
+          source={source}
+          x={drawingX}
+          y={drawingY}
+          width={drawingW}
+          height={drawingH}
+          className="cad-profile-source"
+          imageClassName="cad-profile-image"
+        />
       </g>
 
       {topRails.map((offset, index) => (
@@ -155,7 +140,7 @@ function LinearRail({
 
   return (
     <g className="cad-rail" transform={transform}>
-      <rect x="0" y="0" width={width} height={height} rx="2" />
+      <rect x="0" y="0" width={width} height={height} />
       <line x1={width * 0.18} y1="2" x2={width * 0.18} y2={height - 2} />
       <line x1={width * 0.82} y1="2" x2={width * 0.82} y2={height - 2} />
       <path d={`M ${width * 0.28} ${height * 0.5} H ${width * 0.72}`} />
@@ -202,6 +187,75 @@ function railPositions(count: number, bodySpan: number, railSpan: number) {
   const step = (edge * 2) / (count - 1);
 
   return Array.from({ length: count }, (_, index) => -edge + index * step);
+}
+
+function fitProfile(aspect: number, maxWidth: number, maxHeight: number) {
+  if (aspect >= maxWidth / maxHeight) {
+    return {
+      width: maxWidth,
+      height: maxWidth / aspect,
+    };
+  }
+
+  return {
+    width: maxHeight * aspect,
+    height: maxHeight,
+  };
+}
+
+function fillCavities(
+  shape: ProfileShape,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  inset: number,
+) {
+  if (shape === "quad") {
+    return [centerCavity(x, y, width, height, 0.28)];
+  }
+
+  if (shape === "double-quad") {
+    return splitCavities(x, y, width, height, 2, 0.24, 0.18);
+  }
+
+  if (shape === "triple") {
+    return splitCavities(x, y, width, height, 3, inset, 0.15);
+  }
+
+  if (shape === "double") {
+    return splitCavities(x, y, width, height, 2, inset, 0.15);
+  }
+
+  return [centerCavity(x, y, width, height, inset)];
+}
+
+function splitCavities(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rows: number,
+  insetX: number,
+  insetY: number,
+) {
+  const cellHeight = height / rows;
+
+  return Array.from({ length: rows }, (_, row) => ({
+    x: x + width * insetX,
+    y: y + row * cellHeight + cellHeight * insetY,
+    width: width * (1 - insetX * 2),
+    height: cellHeight * (1 - insetY * 2),
+  }));
+}
+
+function centerCavity(x: number, y: number, width: number, height: number, inset: number) {
+  return {
+    x: x + width * inset,
+    y: y + height * inset,
+    width: width * (1 - inset * 2),
+    height: height * (1 - inset * 2),
+  };
 }
 
 function clamp(value: number, min: number, max: number) {

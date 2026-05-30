@@ -1,51 +1,53 @@
 import type { ProfileSpec } from "../model/types";
-import profileSheetUrl from "../assets/8020-Fractional-Profiles-1.svg";
 
 export type ProfileShape = "single" | "double" | "triple" | "quad" | "double-quad";
-export type ProfileSource = { viewBox: string; aspect: number };
+export type ProfileSource = {
+  url: string;
+  viewBox: string;
+  width: number;
+  height: number;
+  aspect: number;
+};
 
 interface ProfileGlyphProps {
   shape: ProfileShape;
   className?: string;
 }
 
-export const profileSheet = {
-  width: 448.91787,
-  height: 228.88645,
-};
-
-const sourceProfiles = {
-  compact: { viewBox: "14 99 117 115", aspect: 1 },
-  heavy: { viewBox: "226 46 169 168", aspect: 1 },
+const mcmasterProfileSources: Record<ProfileShape, ProfileSource> = {
+  single: source(
+    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/d5251e63-c8ec-485f-831f-baeff9028907/4212575733954.svg",
+    "0 0 43.2293 42.7119",
+  ),
+  double: source(
+    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/a935f390-e7c8-4913-8256-fcfc4d4e5450/1097894526489.svg",
+    "0 0 44 90.2889",
+  ),
+  triple: source(
+    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/471c4a4f-7737-4d66-b32a-1017fa59e1bd/205912552540.svg",
+    "0 0 44.16 127.9405",
+  ),
+  quad: source(
+    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/9d68464a-14fd-43b8-a0a3-b6f7bc517b74/3895473700269.svg",
+    "0 0 93 93",
+  ),
+  "double-quad": source(
+    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/ddd2f878-8de2-4d62-a884-75a8f228ad0e/7749718419406.svg",
+    "0 0 94.9 190",
+  ),
 };
 
 export function ProfileGlyph({ shape, className }: ProfileGlyphProps) {
-  const cells = profileCellLayout(shape);
-  const cellSize = shape === "quad" || shape === "double-quad" ? 58 : 54;
-  const gap = 4;
-  const padding = 4;
-  const width = cells.cols * cellSize + (cells.cols - 1) * gap + padding * 2;
-  const height = cells.rows * cellSize + (cells.rows - 1) * gap + padding * 2;
   const source = profileSourceForShape(shape);
 
   return (
     <svg
       className={["profile-glyph", className].filter(Boolean).join(" ")}
-      viewBox={`0 0 ${width} ${height}`}
+      viewBox={source.viewBox}
       role="img"
       aria-label={`${shapeLabel(shape)} T-slot profile`}
     >
-      {Array.from({ length: cells.rows }).flatMap((_, row) =>
-        Array.from({ length: cells.cols }).map((__, col) => (
-          <ProfileSourceCrop
-            key={`${row}-${col}`}
-            source={source}
-            x={padding + col * (cellSize + gap)}
-            y={padding + row * (cellSize + gap)}
-            size={cellSize}
-          />
-        )),
-      )}
+      <SourceImage source={source} />
     </svg>
   );
 }
@@ -53,7 +55,7 @@ export function ProfileGlyph({ shape, className }: ProfileGlyphProps) {
 export function HeightGlyph() {
   return (
     <svg className="height-glyph" viewBox="0 0 68 54" role="img" aria-label="Rail height">
-      <ProfileSourceCrop source={sourceProfiles.compact} x={7} y={9} size={32} />
+      <ProfileSourceCrop source={mcmasterProfileSources.single} x={7} y={9} height={32} />
       <line x1="52" y1="9" x2="52" y2="41" />
       <path d="M 47 14 L 52 9 L 57 14" />
       <path d="M 47 36 L 52 41 L 57 36" />
@@ -76,16 +78,14 @@ export function shapeLabel(shape: ProfileShape) {
     double: "Double",
     triple: "Triple",
     quad: "Quad",
-    "double-quad": "Base",
+    "double-quad": "Double Quad",
   };
 
   return labels[shape];
 }
 
 export function profileSourceForShape(shape: ProfileShape): ProfileSource {
-  return shape === "quad" || shape === "double-quad"
-    ? sourceProfiles.heavy
-    : sourceProfiles.compact;
+  return mcmasterProfileSources[shape];
 }
 
 export function profileCellLayout(shape: ProfileShape) {
@@ -100,14 +100,16 @@ export function ProfileSourceCrop({
   source,
   x,
   y,
-  size,
+  height,
+  width = height * source.aspect,
   className = "profile-source-crop",
   imageClassName = "profile-source-image",
 }: {
   source: ProfileSource;
   x: number;
   y: number;
-  size: number;
+  height: number;
+  width?: number;
   className?: string;
   imageClassName?: string;
 }) {
@@ -116,19 +118,43 @@ export function ProfileSourceCrop({
       className={className}
       x={x}
       y={y}
-      width={size * source.aspect}
-      height={size}
+      width={width}
+      height={height}
       viewBox={source.viewBox}
       preserveAspectRatio="xMidYMid meet"
     >
-      <image
-        className={imageClassName}
-        href={profileSheetUrl}
-        x="0"
-        y="0"
-        width={profileSheet.width}
-        height={profileSheet.height}
-      />
+      <SourceImage source={source} imageClassName={imageClassName} />
     </svg>
   );
+}
+
+function SourceImage({
+  source,
+  imageClassName = "profile-source-image",
+}: {
+  source: ProfileSource;
+  imageClassName?: string;
+}) {
+  return (
+    <image
+      className={imageClassName}
+      href={source.url}
+      x="0"
+      y="0"
+      width={source.width}
+      height={source.height}
+    />
+  );
+}
+
+function source(url: string, viewBox: string): ProfileSource {
+  const [, , width, height] = viewBox.split(/\s+/).map(Number);
+
+  return {
+    url,
+    viewBox,
+    width,
+    height,
+    aspect: width / height,
+  };
 }
