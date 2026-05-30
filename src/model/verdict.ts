@@ -24,8 +24,8 @@ export function getBuildVerdict(analysis: ScenarioAnalysis): BuildVerdict {
       tone: "ready",
       label: "Buildable",
       headline: "Good candidate for the current machine load",
-      summary: "Deflection and modal spacing look healthy for this frame recipe.",
-      nextMove: "Compare weight, cost, and rail mounting before committing to metal.",
+      summary: "Deflection and modal spacing are within target ranges for this load case.",
+      nextMove: "Review weight, cost, and rail mounting before ordering material.",
       reasons: [
         `${formatUm(dynamicUm)} dynamic deflection`,
         `${formatHz(firstModeHz)} first mode`,
@@ -37,13 +37,13 @@ export function getBuildVerdict(analysis: ScenarioAnalysis): BuildVerdict {
   if (usable) {
     return {
       tone: "marginal",
-      label: resonanceWatch ? "Watch resonance" : "Marginal",
+      label: resonanceWatch ? "Resonance caution" : "Marginal",
       headline: resonanceWatch
-        ? "Marginal for aluminum cutting: watch resonance"
-        : "Marginal but usable for light aluminum work",
+        ? "Marginal for aluminum cutting due to modal spacing"
+        : "Marginal for light aluminum work",
       summary: resonanceWatch
-        ? "The frame is not wildly flexible, but a cutting excitation is close enough to a structural mode to deserve attention."
-        : "The frame can be useful, but it is not a comfortable stiffness reserve for heavier passes.",
+        ? "Deflection is workable, but a cutting excitation is close to a structural mode."
+        : "The frame is usable, but stiffness reserve is limited for heavier passes.",
       nextMove: resonanceWatch
         ? "Move the tooth-passing frequency away with spindle speed, flute count, shorter span, or a taller profile."
         : "Try a taller extrusion, shorter span, or dual rails before stepping up cutting force.",
@@ -58,7 +58,7 @@ export function getBuildVerdict(analysis: ScenarioAnalysis): BuildVerdict {
   return {
     tone: "blocked",
     label: "Too flexible",
-    headline: "Not a good machine-tool beam as configured",
+    headline: "Not recommended as a machine-tool beam as configured",
     summary: "This stack is likely to chatter or lose accuracy under the selected machine-tool load.",
     nextMove: "Shorten the span, rotate to the stronger axis, step up the profile, or redesign around a heavier base member.",
     reasons: [
