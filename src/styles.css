@@ -50,6 +50,15 @@ button {
   cursor: pointer;
 }
 
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 1px solid var(--terminal);
+  outline-offset: 2px;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
@@ -158,6 +167,10 @@ h2 {
 .share-button.icon-only {
   width: 36px;
   padding: 7px;
+}
+
+.reset-button {
+  color: #b8c3cf;
 }
 
 .share-link-readout {

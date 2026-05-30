@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { HeaderBar } from "./components/HeaderBar";
 import { ProfileIntake } from "./components/ProfileIntake";
 import { ScenarioControls } from "./components/ScenarioControls";
@@ -13,7 +13,13 @@ import { ScenarioComparison } from "./components/ScenarioComparison";
 import { AssumptionPanel } from "./components/AssumptionPanel";
 import { profiles } from "./data/profiles";
 import { analyzeScenario } from "./model/scenario";
-import { readSharedDesign } from "./model/share";
+import {
+  clearDraftDesign,
+  clearSharedDesignFromUrl,
+  readDraftDesign,
+  readSharedDesign,
+  saveDraftDesign,
+} from "./model/share";
 import type { MachineScenario, ProfileSpec } from "./model/types";
 
 const initialScenario: MachineScenario = {
@@ -40,12 +46,16 @@ const initialScenario: MachineScenario = {
 };
 
 export default function App() {
-  const sharedDesign = useMemo(() => readSharedDesign(), []);
+  const startingDesign = useMemo(() => readSharedDesign() ?? readDraftDesign(), []);
   const [scenario, setScenario] = useState<MachineScenario>(
-    sharedDesign?.scenario ?? initialScenario,
+    startingDesign?.scenario ?? initialScenario,
   );
   const [customProfile, setCustomProfile] = useState<ProfileSpec | null>(
-    sharedDesign?.customProfile ?? null,
+    startingDesign?.customProfile ?? null,
+  );
+  const design = useMemo(
+    () => ({ version: 1 as const, scenario, customProfile }),
+    [customProfile, scenario],
   );
 
   const activeProfile = useMemo(() => {
@@ -60,12 +70,23 @@ export default function App() {
     () => analyzeScenario(activeProfile, scenario),
     [activeProfile, scenario],
   );
+  const resetDesign = () => {
+    clearDraftDesign();
+    clearSharedDesignFromUrl();
+    setCustomProfile(null);
+    setScenario(initialScenario);
+  };
+
+  useEffect(() => {
+    saveDraftDesign(design);
+  }, [design]);
 
   return (
     <div className="app">
       <HeaderBar
         analysis={analysis}
-        design={{ version: 1, scenario, customProfile }}
+        design={design}
+        onReset={resetDesign}
       />
 
       <main className="workbench" aria-label="Machine frame simulation workspace">

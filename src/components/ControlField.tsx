@@ -50,7 +50,10 @@ export function NumberField({
 }: NumberFieldProps) {
   const id = useId();
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    onChange(Number(event.target.value));
+    const nextValue = Number(event.target.value);
+    if (!Number.isFinite(nextValue)) return;
+
+    onChange(clamp(nextValue, min, max));
   };
   const progress = `${Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100))}%`;
   const rangeStyle = { "--range-progress": progress } as CSSProperties;
@@ -93,6 +96,10 @@ function formatReadout(value: number, step: number, unit?: string) {
   const raw = value.toFixed(decimals);
   const rounded = decimals > 0 ? raw.replace(/\.?0+$/u, "") : raw;
   return unit ? `${rounded} ${unit}` : rounded;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 export function SelectField({ label, value, options, onChange }: SelectFieldProps) {

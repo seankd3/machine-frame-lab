@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, Gauge } from "lucide-react";
+import { Activity, AlertTriangle, Gauge, RotateCcw } from "lucide-react";
 import { ShareActions } from "./ShareActions";
 import type { SharedDesign } from "../model/share";
 import type { ScenarioAnalysis } from "../model/types";
@@ -7,9 +7,10 @@ import { formatFrequency, riskLabel } from "../utils/format";
 interface HeaderBarProps {
   analysis: ScenarioAnalysis;
   design: SharedDesign;
+  onReset: () => void;
 }
 
-export function HeaderBar({ analysis, design }: HeaderBarProps) {
+export function HeaderBar({ analysis, design, onReset }: HeaderBarProps) {
   return (
     <header className="header-bar">
       <div className="header-brand">
@@ -21,6 +22,15 @@ export function HeaderBar({ analysis, design }: HeaderBarProps) {
 
       <div className="header-status" aria-label="Current simulation status">
         <ShareActions design={design} />
+        <button
+          className="status-pill share-button icon-only reset-button"
+          type="button"
+          title="Reset setup"
+          aria-label="Reset setup"
+          onClick={onReset}
+        >
+          <RotateCcw size={16} />
+        </button>
         <div className={`status-pill risk-${analysis.riskLevel}`}>
           <AlertTriangle size={16} />
           <span>Modal risk: {riskLabel(analysis.riskLevel)}</span>

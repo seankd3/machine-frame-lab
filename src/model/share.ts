@@ -1,6 +1,7 @@
 import type { MachineScenario, ProfileSpec } from "./types";
 
 const SHARE_PARAM = "design";
+const DRAFT_KEY = "machine-frame-lab:draft";
 
 export interface SharedDesign {
   version: 1;
@@ -24,6 +25,42 @@ export function readSharedDesign(): SharedDesign | null {
   } catch {
     return null;
   }
+}
+
+export function readDraftDesign(): SharedDesign | null {
+  try {
+    const encoded = window.localStorage.getItem(DRAFT_KEY);
+    if (!encoded) return null;
+
+    const parsed = JSON.parse(encoded) as SharedDesign;
+    return parsed.version === 1 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveDraftDesign(payload: SharedDesign) {
+  try {
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+  } catch {
+    // Private browsing and locked-down browsers can block local draft saves.
+  }
+}
+
+export function clearDraftDesign() {
+  try {
+    window.localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // Nothing to clear if storage is unavailable.
+  }
+}
+
+export function clearSharedDesignFromUrl() {
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(SHARE_PARAM)) return;
+
+  url.searchParams.delete(SHARE_PARAM);
+  window.history.replaceState(null, "", url.toString());
 }
 
 export function downloadSharedDesign(payload: SharedDesign) {
