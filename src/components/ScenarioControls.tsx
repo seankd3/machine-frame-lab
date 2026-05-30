@@ -12,7 +12,7 @@ export function ScenarioControls({ scenario, onScenarioChange }: ScenarioControl
   const update = (patch: Partial<MachineScenario>) => onScenarioChange({ ...scenario, ...patch });
 
   return (
-    <PanelSection title="Cutting load" icon={<SlidersHorizontal size={18} />}>
+    <PanelSection title="2 Define load" icon={<SlidersHorizontal size={18} />}>
       <SelectField
         label="Preset"
         value="custom"

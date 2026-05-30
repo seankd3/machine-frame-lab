@@ -35,23 +35,6 @@ body {
     var(--bg);
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.018) 0,
-    rgba(255, 255, 255, 0.018) 1px,
-    transparent 1px,
-    transparent 6px
-  );
-  mix-blend-mode: screen;
-  opacity: 0.18;
-}
-
 button,
 input,
 select,
@@ -165,9 +148,7 @@ h2 {
   color: #dfd9c8;
   background: #11120f;
   white-space: nowrap;
-  font-family: var(--mono);
-  text-transform: uppercase;
-  font-size: 0.78rem;
+  font-size: 0.86rem;
 }
 
 .share-button {
@@ -255,9 +236,9 @@ h2 {
 .resonance-map,
 .comparison-table {
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 6px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent),
     var(--panel);
 }
 
@@ -343,7 +324,7 @@ input[type="range"] {
   gap: 4px;
   padding: 4px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 6px;
   background: #0b0c0a;
 }
 
@@ -352,7 +333,7 @@ input[type="range"] {
 .icon-button {
   min-height: 32px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #d9d5ca;
   background: transparent;
 }
@@ -401,16 +382,20 @@ input[type="range"] {
 .evidence-list span {
   padding: 5px 7px;
   border: 1px solid #34362f;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #bbb7aa;
   background: #090a09;
-  font-family: var(--mono);
   font-size: 0.74rem;
 }
 
 .source-stack a {
   color: var(--cyan);
   text-decoration: none;
+}
+
+.source-stack span:last-child {
+  flex-basis: 100%;
+  color: #8f8a7e;
 }
 
 .evidence-list span {
@@ -422,7 +407,7 @@ input[type="range"] {
   gap: 10px;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 6px;
   background: #0b0c0a;
 }
 
@@ -432,7 +417,6 @@ input[type="range"] {
   justify-content: space-between;
   gap: 8px;
   color: #d8d4c7;
-  font-family: var(--mono);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -457,7 +441,7 @@ input[type="range"] {
   gap: 5px;
   padding: 8px 5px;
   border: 1px solid #393b33;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #aaa69a;
   background: #10110e;
 }
@@ -466,15 +450,7 @@ input[type="range"] {
 .shape-tile.hinted {
   border-color: var(--terminal);
   color: var(--text);
-  background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(255, 207, 0, 0.08) 0,
-      rgba(255, 207, 0, 0.08) 1px,
-      transparent 1px,
-      transparent 7px
-    ),
-    #12130f;
+  background: #17170f;
 }
 
 .shape-tile.hinted:not(.active) {
@@ -483,7 +459,6 @@ input[type="range"] {
 
 .shape-tile span {
   font-size: 0.74rem;
-  font-family: var(--mono);
 }
 
 .profile-glyph {
@@ -528,10 +503,9 @@ input[type="range"] {
 .height-chip-grid button {
   min-height: 31px;
   border: 1px solid #393b33;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #aaa69a;
   background: #090a09;
-  font-family: var(--mono);
 }
 
 .system-toggle button.active,
@@ -577,14 +551,7 @@ input[type="range"] {
   align-items: center;
   border-color: color-mix(in srgb, var(--verdict), var(--line) 62%);
   background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.022) 0,
-      rgba(255, 255, 255, 0.022) 1px,
-      transparent 1px,
-      transparent 8px
-    ),
-    linear-gradient(90deg, color-mix(in srgb, var(--verdict), transparent 89%), transparent 48%),
+    linear-gradient(90deg, color-mix(in srgb, var(--verdict), transparent 92%), transparent 52%),
     #10110e;
 }
 
@@ -604,9 +571,7 @@ input[type="range"] {
   display: grid;
   gap: 8px;
   color: var(--verdict);
-  font-family: var(--mono);
   font-weight: 800;
-  text-transform: uppercase;
 }
 
 .verdict-mark span {
@@ -641,10 +606,9 @@ input[type="range"] {
 .verdict-reasons span {
   padding: 6px 8px;
   border: 1px solid #383a32;
-  border-radius: 4px;
+  border-radius: 6px;
   color: #dfdbce;
   background: #090a09;
-  font-family: var(--mono);
   font-size: 0.76rem;
 }
 
@@ -677,7 +641,6 @@ input[type="range"] {
   border-bottom: 0;
   color: #aaa69a;
   font-size: 0.8rem;
-  font-family: var(--mono);
 }
 
 .stage-toolbar div {
@@ -687,14 +650,12 @@ input[type="range"] {
 
 .stage-toolbar span {
   color: #918d82;
-  font-family: var(--mono);
   font-size: 0.72rem;
   text-transform: uppercase;
 }
 
 .stage-toolbar strong {
   color: var(--text);
-  font-family: var(--mono);
 }
 
 .visual-layout {
@@ -798,7 +759,6 @@ input[type="range"] {
 
 .beam-diagram text {
   fill: var(--terminal);
-  font-family: var(--mono);
   font-size: 12px;
 }
 
@@ -824,14 +784,12 @@ input[type="range"] {
 .kpi-card small {
   display: block;
   color: #aaa69a;
-  font-family: var(--mono);
   font-size: 0.76rem;
 }
 
 .kpi-card strong {
   display: block;
   margin: 7px 0 4px;
-  font-family: var(--mono);
   font-size: clamp(1.2rem, 2.2vw, 1.65rem);
   line-height: 1;
 }
@@ -854,13 +812,11 @@ input[type="range"] {
 .mode-strip span {
   display: block;
   color: #aaa69a;
-  font-family: var(--mono);
   font-size: 0.78rem;
 }
 
 .mode-strip strong {
   color: var(--text);
-  font-family: var(--mono);
 }
 
 .mode-strip line {
@@ -883,15 +839,8 @@ input[type="range"] {
   height: 78px;
   margin: 12px;
   border: 1px solid #33352d;
-  border-radius: 4px;
-  background:
-    repeating-linear-gradient(
-      90deg,
-      #151713 0,
-      #151713 36px,
-      #1d1f1a 36px,
-      #1d1f1a 38px
-    );
+  border-radius: 6px;
+  background: #10120f;
 }
 
 .mode-marker,
@@ -922,7 +871,6 @@ input[type="range"] {
   justify-content: space-between;
   padding: 0 12px 10px;
   color: #8f8a7e;
-  font-family: var(--mono);
   font-size: 0.74rem;
 }
 
@@ -936,7 +884,6 @@ input[type="range"] {
 .comparison-table table {
   width: 100%;
   border-collapse: collapse;
-  font-family: var(--mono);
   font-size: 0.8rem;
 }
 
@@ -969,7 +916,6 @@ input[type="range"] {
   border-top: 1px solid var(--line);
   background: #0c0d0c;
   color: #aaa69a;
-  font-family: var(--mono);
   font-size: 0.82rem;
 }
 

@@ -75,7 +75,7 @@ export function ProfileIntake({
   };
 
   return (
-    <PanelSection title="McMaster intake" icon={<FileDown size={18} />}>
+    <PanelSection title="1 Pick extrusion" icon={<FileDown size={18} />}>
       <ProfileVisualPicker
         activeProfile={activeProfile}
         profiles={profiles}
@@ -89,14 +89,14 @@ export function ProfileIntake({
       />
 
       <SelectField
-        label="Seed profile"
+        label="Exact rail"
         value={activeProfile.id}
         options={profileOptions}
         onChange={onProfileChange}
       />
 
       <label className="control-field">
-        <span>Product row or URL</span>
+        <span>Optional McMaster or CAD import</span>
         <textarea
           value={input}
           rows={3}
