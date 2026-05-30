@@ -1567,8 +1567,36 @@ input[type="range"]::-moz-range-thumb {
     grid-template-columns: 1fr;
   }
 
+  .panel-left {
+    order: 1;
+  }
+
   .panel-right {
+    display: contents;
     grid-template-columns: 1fr;
+  }
+
+  .rail-section {
+    order: 2;
+  }
+
+  .fill-section {
+    order: 3;
+  }
+
+  .resonance-map {
+    order: 5;
+  }
+
+  .comparison-table {
+    order: 6;
+  }
+
+  .rail-section,
+  .fill-section,
+  .resonance-map,
+  .comparison-table {
+    margin: 0 8px;
   }
 
   .visual-layout,
@@ -1584,6 +1612,6 @@ input[type="range"]::-moz-range-thumb {
 
   .stage {
     grid-template-rows: auto auto auto;
-    order: -1;
+    order: 4;
   }
 }
