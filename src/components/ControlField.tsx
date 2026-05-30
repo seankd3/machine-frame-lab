@@ -1,4 +1,4 @@
-import type { ChangeEvent, CSSProperties, ReactNode } from "react";
+import { useId, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
 
 interface NumberFieldProps {
   label: string;
@@ -48,6 +48,7 @@ export function NumberField({
   unit,
   onChange,
 }: NumberFieldProps) {
+  const id = useId();
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     onChange(Number(event.target.value));
   };
@@ -55,18 +56,20 @@ export function NumberField({
   const rangeStyle = { "--range-progress": progress } as CSSProperties;
 
   return (
-    <label className="control-field number-field">
+    <div className="control-field number-field">
       <span className="control-label-row">
-        <span>{label}</span>
+        <label htmlFor={`${id}-range`}>{label}</label>
         <strong>{formatReadout(value, step, unit)}</strong>
       </span>
       <div className="number-row">
         <input
+          id={`${id}-range`}
           type="range"
           value={value}
           min={min}
           max={max}
           step={step}
+          aria-label={`${label} slider`}
           style={rangeStyle}
           onChange={handleChange}
         />
@@ -81,7 +84,7 @@ export function NumberField({
           onChange={handleChange}
         />
       </div>
-    </label>
+    </div>
   );
 }
 
