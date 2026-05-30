@@ -1,4 +1,4 @@
-import { Activity, Gauge, RadioTower } from "lucide-react";
+import { Activity, AlertTriangle, Gauge } from "lucide-react";
 import { ShareActions } from "./ShareActions";
 import type { SharedDesign } from "../model/share";
 import type { ScenarioAnalysis } from "../model/types";
@@ -15,8 +15,7 @@ export function HeaderBar({ analysis, design }: HeaderBarProps) {
       <div className="header-brand">
         <p className="eyebrow">
           <span>Doherty Dynamics</span>
-          <span>Unit ID: MFL-01</span>
-          <span className="signal-label">Signal acquired</span>
+          <span>Machine frame analysis</span>
         </p>
         <h1>FrameForge Lab</h1>
       </div>
@@ -24,16 +23,16 @@ export function HeaderBar({ analysis, design }: HeaderBarProps) {
       <div className="header-status" aria-label="Current simulation status">
         <ShareActions design={design} />
         <div className={`status-pill risk-${analysis.riskLevel}`}>
-          <RadioTower size={16} />
-          <span>{riskLabel(analysis.riskLevel)} modal margin</span>
+          <AlertTriangle size={16} />
+          <span>Modal risk: {riskLabel(analysis.riskLevel)}</span>
         </div>
         <div className="status-pill">
           <Gauge size={16} />
-          <span>F1 {formatFrequency(analysis.beam.frequenciesHz[0] ?? 0)}</span>
+          <span>First mode {formatFrequency(analysis.beam.frequenciesHz[0] ?? 0)}</span>
         </div>
         <div className="status-pill">
           <Activity size={16} />
-          <span>TPF {formatFrequency(analysis.toothPassingHz)}</span>
+          <span>Tooth pass {formatFrequency(analysis.toothPassingHz)}</span>
         </div>
       </div>
     </header>
