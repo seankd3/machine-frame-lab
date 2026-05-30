@@ -12,9 +12,13 @@ interface HeaderBarProps {
 export function HeaderBar({ analysis, design }: HeaderBarProps) {
   return (
     <header className="header-bar">
-      <div>
-        <p className="eyebrow">FrameForge Lab</p>
-        <h1>Machine frame extrusion simulator</h1>
+      <div className="header-brand">
+        <p className="eyebrow">
+          <span>Doherty Dynamics</span>
+          <span>Unit ID: MFL-01</span>
+          <span className="signal-label">Signal acquired</span>
+        </p>
+        <h1>FrameForge Lab</h1>
       </div>
 
       <div className="header-status" aria-label="Current simulation status">
