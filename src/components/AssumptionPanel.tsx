@@ -18,6 +18,7 @@ export function AssumptionPanel({ profile, analysis }: AssumptionPanelProps) {
       <strong>{profile.family}</strong>
       <strong>{analysis.section.railContributionPct.toFixed(0)}% rail EI share</strong>
       <strong>{analysis.section.fillContributionPct.toFixed(0)}% fill EI share</strong>
+      <span className="brand-credit">Sean Kenneth Doherty</span>
     </footer>
   );
 }

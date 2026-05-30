@@ -14,7 +14,6 @@ export function HeaderBar({ analysis, design }: HeaderBarProps) {
     <header className="header-bar">
       <div className="header-brand">
         <p className="eyebrow">
-          <span>Doherty Dynamics</span>
           <span>Machine frame analysis</span>
         </p>
         <h1>Machine Frame Lab</h1>

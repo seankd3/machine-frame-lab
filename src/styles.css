@@ -1009,6 +1009,13 @@ input[type="range"]::-moz-range-thumb {
   white-space: nowrap;
 }
 
+.brand-credit {
+  margin-left: auto;
+  color: #7f8d9a;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
 @media (min-width: 1181px) {
   html,
   body,
