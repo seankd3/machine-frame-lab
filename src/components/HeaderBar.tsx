@@ -17,7 +17,7 @@ export function HeaderBar({ analysis, design }: HeaderBarProps) {
           <span>Doherty Dynamics</span>
           <span>Machine frame analysis</span>
         </p>
-        <h1>FrameForge Lab</h1>
+        <h1>Machine Frame Lab</h1>
       </div>
 
       <div className="header-status" aria-label="Current simulation status">

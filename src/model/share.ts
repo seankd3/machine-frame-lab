@@ -33,7 +33,7 @@ export function downloadSharedDesign(payload: SharedDesign) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "frameforge-design.json";
+  link.download = "machine-frame-design.json";
   link.click();
   URL.revokeObjectURL(url);
 }

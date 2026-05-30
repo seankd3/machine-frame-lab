@@ -1,4 +1,4 @@
-# Doherty Dynamics FrameForge Lab
+# Doherty Dynamics Machine Frame Lab
 
 Dark industrial web app for comparing aluminum extrusion machine-frame recipes with beam FEA, modal estimates, rail stacks, and fill media.
 
