@@ -5,6 +5,7 @@ import { ScenarioControls } from "./components/ScenarioControls";
 import { RailControls } from "./components/RailControls";
 import { FillControls } from "./components/FillControls";
 import { KpiGrid } from "./components/KpiGrid";
+import { VerdictPanel } from "./components/VerdictPanel";
 import { FrameVisualizer } from "./components/FrameVisualizer";
 import { ModeShapeChart } from "./components/ModeShapeChart";
 import { ResonanceMap } from "./components/ResonanceMap";
@@ -84,6 +85,7 @@ export default function App() {
         </aside>
 
         <section className="stage">
+          <VerdictPanel analysis={analysis} />
           <FrameVisualizer
             profile={activeProfile}
             scenario={scenario}

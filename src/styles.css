@@ -178,12 +178,13 @@ h2 {
   min-width: 0;
   padding: 14px;
   display: grid;
-  grid-template-rows: minmax(360px, 1fr) auto auto;
+  grid-template-rows: auto minmax(360px, 1fr) auto auto;
   gap: 12px;
 }
 
 .panel-section,
 .visual-stage,
+.verdict-panel,
 .kpi-card,
 .mode-strip article,
 .resonance-map,
@@ -484,6 +485,91 @@ input[type="range"] {
   overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr auto;
+}
+
+.verdict-panel {
+  --verdict: #ffcc66;
+  min-height: 106px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: 150px minmax(210px, 1fr) minmax(180px, 0.72fr);
+  gap: 14px;
+  align-items: center;
+  border-color: color-mix(in srgb, var(--verdict), #303128 62%);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--verdict), transparent 88%), transparent 46%),
+    #181a16;
+}
+
+.verdict-ready {
+  --verdict: #61d394;
+}
+
+.verdict-marginal {
+  --verdict: #ffcc66;
+}
+
+.verdict-blocked {
+  --verdict: #ff6b4a;
+}
+
+.verdict-mark {
+  display: grid;
+  gap: 8px;
+  color: var(--verdict);
+  font-weight: 800;
+}
+
+.verdict-mark span {
+  font-size: 1.1rem;
+}
+
+.verdict-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.verdict-copy p {
+  color: #f4efe3;
+  font-size: clamp(1.05rem, 1.7vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.verdict-copy span,
+.verdict-next {
+  color: #aaa69a;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.verdict-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.verdict-reasons span {
+  padding: 6px 8px;
+  border: 1px solid #383a32;
+  border-radius: 7px;
+  color: #dfdbce;
+  background: #10110f;
+  font-size: 0.76rem;
+}
+
+.verdict-next {
+  grid-column: 2 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+  color: #d8d4c7;
+}
+
+.verdict-next svg {
+  color: var(--verdict);
+  flex: 0 0 auto;
 }
 
 .stage-toolbar,
@@ -832,11 +918,17 @@ input[type="range"] {
 
   .visual-layout,
   .kpi-grid,
-  .mode-strip {
+  .mode-strip,
+  .verdict-panel {
     grid-template-columns: 1fr;
+  }
+
+  .verdict-next {
+    grid-column: 1;
   }
 
   .stage {
     grid-template-rows: auto auto auto;
+    order: -1;
   }
 }
