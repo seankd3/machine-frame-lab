@@ -75,7 +75,7 @@ export function ProfileIntake({
   };
 
   return (
-    <PanelSection title="1 Pick extrusion" icon={<FileDown size={18} />}>
+    <PanelSection title="1 Pick extrusion" icon={<FileDown size={18} />} className="profile-section">
       <ProfileVisualPicker
         activeProfile={activeProfile}
         profiles={profiles}
@@ -94,37 +94,6 @@ export function ProfileIntake({
         options={profileOptions}
         onChange={onProfileChange}
       />
-
-      <label className="control-field">
-        <span>Optional McMaster or CAD import</span>
-        <textarea
-          value={input}
-          rows={3}
-          placeholder="Paste McMaster part row, URL, drawing title, or CAD file name"
-          onChange={(event) => setInput(event.target.value)}
-        />
-      </label>
-
-      <div className="intake-actions">
-        <label className="icon-button" title="Attach CAD, drawing, DXF, STEP, PDF">
-          <Upload size={17} />
-          <input
-            type="file"
-            multiple
-            accept=".step,.stp,.dxf,.dwg,.pdf,.zip,.sldprt"
-            onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
-          />
-        </label>
-        <button
-          className="text-button"
-          type="button"
-          disabled={!canApply}
-          onClick={() => onApplyDetectedProfile(createDetectedProfile(detection, activeProfile))}
-        >
-          <Wand2 size={16} />
-          Apply detected profile
-        </button>
-      </div>
 
       <div className="source-stack">
         {activeProfile.partNumber && activeProfile.sourceUrl ? (
@@ -145,16 +114,51 @@ export function ProfileIntake({
         <span>{activeProfile.source}</span>
       </div>
 
-      {(detection.notes.length > 0 || files.length > 0) && (
-        <div className="evidence-list" aria-label="Imported source evidence">
-          {detection.notes.map((note) => (
-            <span key={note}>{note}</span>
-          ))}
-          {files.map((file) => (
-            <span key={file.name}>{file.name}</span>
-          ))}
+      <details className="import-details">
+        <summary>Optional McMaster or CAD import</summary>
+
+        <label className="control-field import-field">
+          <span>Product row, URL, drawing title, or CAD file name</span>
+          <textarea
+            value={input}
+            rows={3}
+            placeholder="Paste source text"
+            onChange={(event) => setInput(event.target.value)}
+          />
+        </label>
+
+        <div className="intake-actions">
+          <label className="icon-button" title="Attach CAD, drawing, DXF, STEP, PDF">
+            <Upload size={17} />
+            <input
+              type="file"
+              multiple
+              accept=".step,.stp,.dxf,.dwg,.pdf,.zip,.sldprt"
+              onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
+            />
+          </label>
+          <button
+            className="text-button"
+            type="button"
+            disabled={!canApply}
+            onClick={() => onApplyDetectedProfile(createDetectedProfile(detection, activeProfile))}
+          >
+            <Wand2 size={16} />
+            Apply detected profile
+          </button>
         </div>
-      )}
+
+        {(detection.notes.length > 0 || files.length > 0) && (
+          <div className="evidence-list" aria-label="Imported source evidence">
+            {detection.notes.map((note) => (
+              <span key={note}>{note}</span>
+            ))}
+            {files.map((file) => (
+              <span key={file.name}>{file.name}</span>
+            ))}
+          </div>
+        )}
+      </details>
     </PanelSection>
   );
 }

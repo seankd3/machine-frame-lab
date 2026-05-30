@@ -1,4 +1,4 @@
-import type { ChangeEvent, ReactNode } from "react";
+import type { ChangeEvent, CSSProperties, ReactNode } from "react";
 
 interface NumberFieldProps {
   label: string;
@@ -21,13 +21,15 @@ export function PanelSection({
   title,
   icon,
   children,
+  className,
 }: {
   title: string;
   icon?: ReactNode;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="panel-section">
+    <section className={["panel-section", className].filter(Boolean).join(" ")}>
       <div className="section-title">
         {icon}
         <h2>{title}</h2>
@@ -49,10 +51,15 @@ export function NumberField({
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
     onChange(Number(event.target.value));
   };
+  const progress = `${Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100))}%`;
+  const rangeStyle = { "--range-progress": progress } as CSSProperties;
 
   return (
-    <label className="control-field">
-      <span>{label}</span>
+    <label className="control-field number-field">
+      <span className="control-label-row">
+        <span>{label}</span>
+        <strong>{formatReadout(value, step, unit)}</strong>
+      </span>
       <div className="number-row">
         <input
           type="range"
@@ -60,6 +67,7 @@ export function NumberField({
           min={min}
           max={max}
           step={step}
+          style={rangeStyle}
           onChange={handleChange}
         />
         <input
@@ -69,12 +77,19 @@ export function NumberField({
           min={min}
           max={max}
           step={step}
+          aria-label={`${label} value`}
           onChange={handleChange}
         />
-        {unit ? <span className="unit">{unit}</span> : null}
       </div>
     </label>
   );
+}
+
+function formatReadout(value: number, step: number, unit?: string) {
+  const decimals = step < 1 ? String(step).split(".")[1]?.length ?? 2 : 0;
+  const raw = value.toFixed(decimals);
+  const rounded = decimals > 0 ? raw.replace(/\.?0+$/u, "") : raw;
+  return unit ? `${rounded} ${unit}` : rounded;
 }
 
 export function SelectField({ label, value, options, onChange }: SelectFieldProps) {

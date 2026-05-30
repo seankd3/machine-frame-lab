@@ -13,7 +13,7 @@ export function FillControls({ scenario, onScenarioChange }: FillControlsProps) 
     onScenarioChange({ ...scenario, fill: { ...scenario.fill, ...patch } });
 
   return (
-    <PanelSection title="4 Add fill" icon={<Layers3 size={18} />}>
+    <PanelSection title="4 Add fill" icon={<Layers3 size={18} />} className="fill-section">
       <SelectField
         label="Medium"
         value={scenario.fill.mediumId}

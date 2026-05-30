@@ -13,7 +13,7 @@ export function RailControls({ scenario, onScenarioChange }: RailControlsProps) 
     onScenarioChange({ ...scenario, rail: { ...scenario.rail, ...patch } });
 
   return (
-    <PanelSection title="3 Add rails" icon={<Rows3 size={18} />}>
+    <PanelSection title="3 Add rails" icon={<Rows3 size={18} />} className="rail-section">
       <SelectField
         label="Rail model"
         value={scenario.rail.modelId}
