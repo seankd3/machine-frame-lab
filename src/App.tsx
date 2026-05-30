@@ -81,23 +81,25 @@ export default function App() {
               setScenario((current) => ({ ...current, profileId }))
             }
           />
-          <ScenarioControls scenario={scenario} onScenarioChange={setScenario} />
+          <div className="input-stack">
+            <ScenarioControls scenario={scenario} onScenarioChange={setScenario} />
+            <RailControls scenario={scenario} onScenarioChange={setScenario} />
+            <FillControls scenario={scenario} onScenarioChange={setScenario} />
+          </div>
         </aside>
 
         <section className="stage">
-          <VerdictPanel analysis={analysis} />
           <FrameVisualizer
             profile={activeProfile}
             scenario={scenario}
             analysis={analysis}
           />
-          <KpiGrid analysis={analysis} />
           <ModeShapeChart analysis={analysis} />
         </section>
 
         <aside className="panel panel-right">
-          <RailControls scenario={scenario} onScenarioChange={setScenario} />
-          <FillControls scenario={scenario} onScenarioChange={setScenario} />
+          <VerdictPanel analysis={analysis} />
+          <KpiGrid analysis={analysis} />
           <ResonanceMap analysis={analysis} />
           <ScenarioComparison profile={activeProfile} scenario={scenario} />
         </aside>

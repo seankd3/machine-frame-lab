@@ -217,11 +217,18 @@ h2 {
   overflow: auto;
 }
 
+.input-stack {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .stage {
   min-width: 0;
   padding: 14px;
   display: grid;
-  grid-template-rows: auto minmax(360px, 1fr) auto auto;
+  grid-template-rows: minmax(360px, 1fr) auto;
   gap: 12px;
 }
 
@@ -1064,7 +1071,7 @@ input[type="range"]::-moz-range-thumb {
   .workbench {
     min-height: 0;
     overflow: hidden;
-    grid-template-columns: minmax(350px, 372px) minmax(520px, 1fr) minmax(286px, 312px);
+    grid-template-columns: minmax(500px, 540px) minmax(440px, 1fr) minmax(316px, 360px);
   }
 
   .panel {
@@ -1077,14 +1084,24 @@ input[type="range"]::-moz-range-thumb {
 
   .panel-left {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    overflow: hidden;
+    grid-template-columns: minmax(235px, 0.92fr) minmax(245px, 1fr);
+    align-content: start;
+    align-items: start;
+    overflow: auto;
+  }
+
+  .input-stack {
+    gap: 7px;
+  }
+
+  .panel-left .panel-section {
+    flex: 0 0 auto;
   }
 
   .profile-section,
   .load-section {
     min-height: 0;
-    overflow: auto;
+    overflow: visible;
     overflow-x: hidden;
     scrollbar-gutter: stable;
   }
@@ -1290,7 +1307,7 @@ input[type="range"]::-moz-range-thumb {
     padding: 8px;
     gap: 7px;
     overflow: hidden;
-    grid-template-rows: minmax(90px, auto) minmax(210px, 1fr) minmax(70px, auto) minmax(64px, auto);
+    grid-template-rows: minmax(280px, 1fr) minmax(88px, auto);
   }
 
   .verdict-panel {
@@ -1332,7 +1349,7 @@ input[type="range"]::-moz-range-thumb {
 
   .cross-section,
   .beam-diagram {
-    min-height: 180px;
+    min-height: 220px;
   }
 
   .kpi-grid,
@@ -1363,10 +1380,27 @@ input[type="range"]::-moz-range-thumb {
   }
 
   .mode-strip article {
-    min-height: 64px;
+    min-height: 82px;
     padding: 7px;
     grid-template-columns: 62px 1fr;
     gap: 7px;
+  }
+
+  .panel-right .verdict-panel {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .panel-right .verdict-next {
+    grid-column: 1;
+  }
+
+  .panel-right .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panel-right .kpi-card {
+    min-height: 80px;
   }
 
   .mode-strip span {
@@ -1455,23 +1489,19 @@ input[type="range"]::-moz-range-thumb {
 
 @media (min-width: 1320px) {
   .workbench {
-    grid-template-columns: minmax(270px, 282px) minmax(270px, 282px) minmax(510px, 1fr) minmax(260px, 280px);
+    grid-template-columns: minmax(520px, 560px) minmax(460px, 1fr) minmax(320px, 360px);
   }
 
   .panel-left {
-    display: contents;
+    display: grid;
   }
 
   .profile-section {
-    grid-column: 1;
-    margin: 8px 0 8px 8px;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .load-section {
-    grid-column: 2;
-    margin: 8px 0;
-    overflow: hidden;
+    overflow: visible;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -1480,12 +1510,9 @@ input[type="range"]::-moz-range-thumb {
     grid-column: 1 / -1;
   }
 
-  .stage {
-    grid-column: 3;
-  }
-
+  .stage,
   .panel-right {
-    grid-column: 4;
+    grid-column: auto;
   }
 }
 
@@ -1572,31 +1599,16 @@ input[type="range"]::-moz-range-thumb {
   }
 
   .panel-right {
-    display: contents;
-    grid-template-columns: 1fr;
-  }
-
-  .rail-section {
-    order: 2;
-  }
-
-  .fill-section {
     order: 3;
-  }
-
-  .resonance-map {
-    order: 5;
-  }
-
-  .comparison-table {
-    order: 6;
+    display: flex;
+    grid-template-columns: 1fr;
   }
 
   .rail-section,
   .fill-section,
   .resonance-map,
   .comparison-table {
-    margin: 0 8px;
+    margin: 0;
   }
 
   .visual-layout,
@@ -1612,6 +1624,6 @@ input[type="range"]::-moz-range-thumb {
 
   .stage {
     grid-template-rows: auto auto auto;
-    order: 4;
+    order: 2;
   }
 }
