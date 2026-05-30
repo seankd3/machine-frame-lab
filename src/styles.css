@@ -1566,18 +1566,24 @@ input[type="range"]::-moz-range-thumb {
 
 @media (max-width: 1180px) {
   .workbench {
-    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
-  .panel-right {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(220px, 1fr));
-    overflow: visible;
+  .panel-left {
+    order: 1;
   }
 
   .stage {
     min-width: 0;
+    order: 2;
+  }
+
+  .panel-right {
+    grid-column: auto;
+    order: 3;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow: visible;
   }
 }
 
@@ -1590,16 +1596,7 @@ input[type="range"]::-moz-range-thumb {
     flex-direction: column;
   }
 
-  .workbench {
-    grid-template-columns: 1fr;
-  }
-
-  .panel-left {
-    order: 1;
-  }
-
   .panel-right {
-    order: 3;
     display: flex;
     grid-template-columns: 1fr;
   }
@@ -1624,6 +1621,5 @@ input[type="range"]::-moz-range-thumb {
 
   .stage {
     grid-template-rows: auto auto auto;
-    order: 2;
   }
 }
