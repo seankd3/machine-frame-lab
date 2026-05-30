@@ -1,7 +1,6 @@
-import { getFill } from "../data/materials";
-import { getRail } from "../data/rails";
 import type { MachineScenario, ProfileSpec, ScenarioAnalysis } from "../model/types";
 import { formatFrequency, formatMicrons } from "../utils/format";
+import { CadProfileCutaway } from "./CadProfileCutaway";
 
 interface FrameVisualizerProps {
   profile: ProfileSpec;
@@ -28,7 +27,7 @@ export function FrameVisualizer({ profile, scenario, analysis }: FrameVisualizer
       </div>
 
       <div className="visual-layout">
-        <CrossSectionDiagram profile={profile} scenario={scenario} />
+        <CadProfileCutaway profile={profile} scenario={scenario} />
         <BeamDiagram scenario={scenario} analysis={analysis} />
       </div>
 
@@ -38,95 +37,6 @@ export function FrameVisualizer({ profile, scenario, analysis }: FrameVisualizer
         <span>{analysis.section.massKgM.toFixed(2)} kg/m stack</span>
       </div>
     </section>
-  );
-}
-
-function CrossSectionDiagram({
-  profile,
-  scenario,
-}: {
-  profile: ProfileSpec;
-  scenario: MachineScenario;
-}) {
-  const rail = getRail(scenario.rail.modelId);
-  const fill = getFill(scenario.fill.mediumId);
-  const pad = 34;
-  const width = 260;
-  const height = 220;
-  const maxDim = Math.max(profile.widthMm + rail.heightMm * 2, profile.heightMm + rail.heightMm * 2);
-  const scale = 150 / maxDim;
-  const bodyW = profile.widthMm * scale;
-  const bodyH = profile.heightMm * scale;
-  const x = width / 2 - bodyW / 2;
-  const y = height / 2 - bodyH / 2 + 8;
-  const railW = rail.widthMm * scale;
-  const railH = rail.heightMm * scale;
-  const topRails = rail.id === "none" ? [] : railPositions(scenario.rail.topCount, bodyW, railW);
-  const sideRails = rail.id === "none" ? [] : railPositions(scenario.rail.sideCount, bodyH, railW);
-  const fillInset = Math.max(10, profile.slotMm * scale * 1.4);
-
-  return (
-    <svg className="cross-section" viewBox={`0 0 ${width} ${height}`} role="img">
-      <title>Extrusion cross section with rails and fill</title>
-      <rect className="axis-grid" x={pad} y={pad} width={width - pad * 2} height={height - pad * 2} />
-      <rect className="profile-body" x={x} y={y} width={bodyW} height={bodyH} rx="3" />
-      <rect
-        className={`fill-body fill-${fill.id}`}
-        x={x + fillInset}
-        y={y + fillInset}
-        width={Math.max(0, bodyW - fillInset * 2)}
-        height={Math.max(0, bodyH - fillInset * 2)}
-        opacity={fill.id === "none" ? 0 : Math.max(0.12, scenario.fill.ratio)}
-      />
-      <TSlotGrooves x={x} y={y} width={bodyW} height={bodyH} slot={profile.slotMm * scale} />
-
-      {topRails.map((offset, index) => (
-        <rect
-          className="rail-body"
-          key={`top-${index}`}
-          x={x + bodyW / 2 + offset - railW / 2}
-          y={y - railH - 3}
-          width={railW}
-          height={railH}
-          rx="2"
-        />
-      ))}
-
-      {sideRails.map((offset, index) => (
-        <rect
-          className="rail-body side"
-          key={`side-${index}`}
-          x={index % 2 === 0 ? x - railH - 3 : x + bodyW + 3}
-          y={y + bodyH / 2 + offset - railW / 2}
-          width={railH}
-          height={railW}
-          rx="2"
-        />
-      ))}
-    </svg>
-  );
-}
-
-function TSlotGrooves({
-  x,
-  y,
-  width,
-  height,
-  slot,
-}: {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  slot: number;
-}) {
-  const groove = Math.max(4, slot);
-  return (
-    <g className="slot-grooves">
-      <rect x={x + width / 2 - groove / 2} y={y - 1} width={groove} height={height + 2} />
-      <rect x={x - 1} y={y + height / 2 - groove / 2} width={width + 2} height={groove} />
-      <circle cx={x + width / 2} cy={y + height / 2} r={groove * 0.65} />
-    </g>
   );
 }
 
@@ -189,13 +99,4 @@ function SupportGlyph({
       <line x1={x - 18} y1={y + 31} x2={x + 18} y2={y + 31} />
     </g>
   );
-}
-
-function railPositions(count: number, bodySpan: number, railSpan: number) {
-  if (count <= 0) return [];
-  if (count === 1) return [0];
-  const edge = Math.max(0, bodySpan / 2 - railSpan / 2 - 4);
-  if (count === 2) return [-edge, edge];
-  const step = (edge * 2) / (count - 1);
-  return Array.from({ length: count }, (_, index) => -edge + index * step);
 }

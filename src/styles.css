@@ -748,17 +748,85 @@ input[type="range"]::-moz-range-thumb {
 .visual-layout {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(220px, 0.9fr) minmax(320px, 1.3fr);
-  align-items: center;
+  grid-template-rows: minmax(270px, 1.1fr) minmax(230px, 0.9fr);
+  align-items: stretch;
   gap: 10px;
   padding: 10px;
 }
 
-.cross-section,
+.cad-cutaway,
 .beam-diagram {
   width: 100%;
   height: 100%;
   min-height: 270px;
+}
+
+.cad-cutaway {
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  background: #070c11;
+}
+
+.cad-plate {
+  fill: #0b1117;
+  stroke: #25313b;
+  stroke-width: 1;
+}
+
+.cad-profile-source {
+  overflow: hidden;
+}
+
+.cad-profile-image {
+  filter: brightness(0) invert(92%) contrast(135%) drop-shadow(0 0 2px rgba(232, 240, 247, 0.22));
+  opacity: 0.98;
+}
+
+.cad-fill {
+  fill: #315f69;
+  stroke: rgba(102, 227, 208, 0.5);
+  stroke-width: 1;
+}
+
+.cad-rail rect {
+  fill: #d7e0e7;
+  stroke: #fbfdff;
+  stroke-width: 1.2;
+}
+
+.cad-rail line,
+.cad-rail path {
+  fill: none;
+  stroke: #46515c;
+  stroke-linecap: round;
+  stroke-width: 1.2;
+}
+
+.cad-rail circle {
+  fill: #1a222b;
+  stroke: #f8fbff;
+  stroke-width: 0.9;
+}
+
+.cad-dimension line {
+  stroke: var(--terminal);
+  stroke-width: 1;
+}
+
+.cad-arrow-head {
+  fill: var(--terminal);
+}
+
+.cad-dimension text,
+.cad-callouts text {
+  fill: #9aa8b6;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.cad-callouts text:first-child {
+  fill: #d8e2ec;
+  font-weight: 800;
 }
 
 .axis-grid {
@@ -1023,7 +1091,7 @@ input[type="range"]::-moz-range-thumb {
   white-space: nowrap;
 }
 
-@media (min-width: 1181px) {
+@media (min-width: 1280px) {
   html,
   body,
   #root {
@@ -1342,14 +1410,14 @@ input[type="range"]::-moz-range-thumb {
   }
 
   .visual-layout {
-    grid-template-columns: minmax(145px, 0.5fr) minmax(260px, 1fr);
-    gap: 6px;
-    padding: 6px;
+    grid-template-rows: minmax(0, 1.14fr) minmax(0, 0.86fr);
+    gap: 7px;
+    padding: 7px;
   }
 
-  .cross-section,
+  .cad-cutaway,
   .beam-diagram {
-    min-height: 220px;
+    min-height: 0;
   }
 
   .kpi-grid,
@@ -1517,6 +1585,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (min-width: 1320px) and (max-height: 800px) {
+  .panel-right .verdict-next {
+    display: none;
+  }
+
   .panel-right {
     gap: 5px;
     padding: 6px;
@@ -1564,7 +1636,7 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1279px) {
   .workbench {
     grid-template-columns: 1fr;
   }
@@ -1584,6 +1656,67 @@ input[type="range"]::-moz-range-thumb {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     overflow: visible;
+  }
+}
+
+@media (min-width: 861px) and (max-width: 1279px) {
+  .panel-left {
+    display: grid;
+    grid-template-columns: minmax(330px, 0.92fr) minmax(330px, 1fr);
+    align-items: start;
+  }
+
+  .panel-left .panel-section {
+    min-width: 0;
+  }
+
+  .profile-section,
+  .load-section {
+    overflow: visible;
+  }
+
+  .load-section {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
+    column-gap: 10px;
+  }
+
+  .load-section > .section-title,
+  .load-section > :nth-child(2),
+  .load-section > :nth-child(7) {
+    grid-column: 1 / -1;
+  }
+
+  .load-section > :nth-child(6) {
+    grid-column: span 2;
+  }
+
+  .load-section .number-row,
+  .rail-section .number-row,
+  .fill-section .number-row {
+    grid-template-columns: minmax(0, 1fr) 64px;
+  }
+
+  .rail-section {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rail-section > .section-title,
+  .rail-section > :nth-child(2),
+  .rail-section > :nth-child(6) {
+    grid-column: 1 / -1;
+  }
+
+  .fill-section {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(110px, 0.72fr);
+    align-items: end;
+  }
+
+  .fill-section > .section-title {
+    grid-column: 1 / -1;
   }
 }
 
