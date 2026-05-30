@@ -4,6 +4,11 @@ import { createDetectedProfile, profiles } from "../data/profiles";
 import { parseMcmasterInput } from "../model/importParser";
 import type { ProfileSpec } from "../model/types";
 import { PanelSection, SelectField } from "./ControlField";
+import {
+  heightKey,
+  ProfileVisualPicker,
+} from "./ProfileVisualPicker";
+import { profileShape, type ProfileShape } from "./ProfileGlyph";
 
 interface ProfileIntakeProps {
   activeProfile: ProfileSpec;
@@ -20,15 +25,69 @@ export function ProfileIntake({
 }: ProfileIntakeProps) {
   const [input, setInput] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [shapeFilter, setShapeFilter] = useState<ProfileShape | "all">("all");
+  const [systemFilter, setSystemFilter] = useState<"all" | "metric" | "inch">("all");
+  const [heightFilter, setHeightFilter] = useState<string | null>(null);
   const detection = useMemo(() => parseMcmasterInput(input), [input]);
   const canApply = Boolean(detection.widthMm && detection.heightMm);
+  const visibleProfiles = useMemo(
+    () =>
+      filterProfiles(profiles, {
+        shape: shapeFilter,
+        system: systemFilter,
+        height: heightFilter,
+      }),
+    [shapeFilter, systemFilter, heightFilter],
+  );
+  const optionProfiles = visibleProfiles.some((profile) => profile.id === activeProfile.id)
+    ? visibleProfiles
+    : [activeProfile, ...visibleProfiles];
   const profileOptions = [
-    ...profiles.map((profile) => ({ value: profile.id, label: profile.name })),
-    ...(customProfile ? [{ value: customProfile.id, label: customProfile.name }] : []),
+    ...optionProfiles.map((profile) => ({ value: profile.id, label: profile.name })),
+    ...(customProfile && !optionProfiles.some((profile) => profile.id === customProfile.id)
+      ? [{ value: customProfile.id, label: customProfile.name }]
+      : []),
   ];
+  const applyFilters = (nextFilters: {
+    shape?: ProfileShape | "all";
+    system?: "all" | "metric" | "inch";
+    height?: string | null;
+  }) => {
+    const filters = {
+      shape: nextFilters.shape ?? shapeFilter,
+      system: nextFilters.system ?? systemFilter,
+      height: nextFilters.height !== undefined ? nextFilters.height : heightFilter,
+    };
+    let matches = filterProfiles(profiles, filters);
+
+    if (matches.length === 0 && filters.height) {
+      filters.height = null;
+      matches = filterProfiles(profiles, filters);
+    }
+
+    setShapeFilter(filters.shape);
+    setSystemFilter(filters.system);
+    setHeightFilter(filters.height);
+
+    if (matches.length > 0 && !matches.some((profile) => profile.id === activeProfile.id)) {
+      onProfileChange(matches[0].id);
+    }
+  };
 
   return (
     <PanelSection title="McMaster intake" icon={<FileDown size={18} />}>
+      <ProfileVisualPicker
+        activeProfile={activeProfile}
+        profiles={profiles}
+        shapeFilter={shapeFilter}
+        systemFilter={systemFilter}
+        heightFilter={heightFilter}
+        matchingCount={visibleProfiles.length}
+        onShapeChange={(shape) => applyFilters({ shape })}
+        onSystemChange={(system) => applyFilters({ system })}
+        onHeightChange={(height) => applyFilters({ height })}
+      />
+
       <SelectField
         label="Seed profile"
         value={activeProfile.id}
@@ -102,4 +161,18 @@ export function ProfileIntake({
 
 function formatMm(value: number) {
   return Number(value.toFixed(value % 1 ? 1 : 0));
+}
+
+function filterProfiles(
+  profileList: ProfileSpec[],
+  filters: {
+    shape: ProfileShape | "all";
+    system: "all" | "metric" | "inch";
+    height: string | null;
+  },
+) {
+  return profileList
+    .filter((profile) => filters.shape === "all" || profileShape(profile) === filters.shape)
+    .filter((profile) => filters.system === "all" || profile.system === filters.system)
+    .filter((profile) => !filters.height || heightKey(profile) === filters.height);
 }

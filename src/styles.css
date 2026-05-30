@@ -348,6 +348,137 @@ input[type="range"] {
   border-color: rgba(99, 215, 193, 0.35);
 }
 
+.visual-picker {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #303128;
+  border-radius: 8px;
+  background: #11120f;
+}
+
+.picker-row-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #d8d4c7;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.picker-row-title strong {
+  color: #8f8a7e;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.shape-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shape-tile {
+  min-height: 94px;
+  display: grid;
+  grid-template-rows: 58px auto;
+  place-items: center;
+  gap: 5px;
+  padding: 8px 5px;
+  border: 1px solid #393b33;
+  border-radius: 7px;
+  color: #aaa69a;
+  background: #181a16;
+}
+
+.shape-tile.active,
+.shape-tile.hinted {
+  border-color: #63d7c1;
+  color: #f4efe3;
+}
+
+.shape-tile.hinted:not(.active) {
+  border-color: #4f6159;
+}
+
+.shape-tile span {
+  font-size: 0.74rem;
+}
+
+.profile-glyph {
+  width: 100%;
+  height: 56px;
+}
+
+.profile-glyph-cell rect,
+.profile-glyph-cell circle,
+.profile-glyph-cell path,
+.profile-glyph-void,
+.height-glyph .profile-glyph-cell rect,
+.height-glyph .profile-glyph-cell circle,
+.height-glyph .profile-glyph-cell path {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.profile-glyph-void {
+  fill: #11120f;
+  stroke-width: 1.8;
+}
+
+.system-toggle,
+.height-chip-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.system-toggle {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.height-chip-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.system-toggle button,
+.height-chip-grid button {
+  min-height: 31px;
+  border: 1px solid #393b33;
+  border-radius: 7px;
+  color: #aaa69a;
+  background: #10110f;
+}
+
+.system-toggle button.active,
+.height-chip-grid button.active {
+  border-color: #63d7c1;
+  color: #f4efe3;
+  background: #20271f;
+}
+
+.height-title {
+  align-items: flex-end;
+}
+
+.height-glyph {
+  width: 52px;
+  height: 40px;
+  color: #d8d4c7;
+}
+
+.height-glyph line,
+.height-glyph path {
+  fill: none;
+  stroke: #ffcc66;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .visual-stage {
   min-height: 360px;
   overflow: hidden;
