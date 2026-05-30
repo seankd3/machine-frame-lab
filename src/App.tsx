@@ -70,21 +70,23 @@ export default function App() {
 
       <main className="workbench" aria-label="Machine frame simulation workspace">
         <aside className="panel panel-left">
-          <ProfileIntake
-            activeProfile={activeProfile}
-            customProfile={customProfile}
-            onApplyDetectedProfile={(profile) => {
-              setCustomProfile(profile);
-              setScenario((current) => ({ ...current, profileId: profile.id }));
-            }}
-            onProfileChange={(profileId) =>
-              setScenario((current) => ({ ...current, profileId }))
-            }
-          />
-          <div className="input-stack">
+          <div className="input-column profile-column">
+            <ProfileIntake
+              activeProfile={activeProfile}
+              customProfile={customProfile}
+              onApplyDetectedProfile={(profile) => {
+                setCustomProfile(profile);
+                setScenario((current) => ({ ...current, profileId: profile.id }));
+              }}
+              onProfileChange={(profileId) =>
+                setScenario((current) => ({ ...current, profileId }))
+              }
+            />
+            <FillControls scenario={scenario} onScenarioChange={setScenario} />
+          </div>
+          <div className="input-column setup-column">
             <ScenarioControls scenario={scenario} onScenarioChange={setScenario} />
             <RailControls scenario={scenario} onScenarioChange={setScenario} />
-            <FillControls scenario={scenario} onScenarioChange={setScenario} />
           </div>
         </aside>
 
