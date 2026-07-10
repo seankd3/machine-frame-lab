@@ -1,4 +1,5 @@
 import type { MachineScenario, ProfileSpec } from "./types";
+import { normalizeDesignLimits } from "./limits";
 
 const SHARE_PARAM = "design";
 const DRAFT_KEY = "machine-frame-lab:draft";
@@ -21,7 +22,7 @@ export function readSharedDesign(): SharedDesign | null {
 
   try {
     const parsed = JSON.parse(decodeDesign(encoded)) as SharedDesign;
-    return parsed.version === 1 ? parsed : null;
+    return parsed.version === 1 ? normalizeSharedDesign(parsed) : null;
   } catch {
     return null;
   }
@@ -33,7 +34,7 @@ export function readDraftDesign(): SharedDesign | null {
     if (!encoded) return null;
 
     const parsed = JSON.parse(encoded) as SharedDesign;
-    return parsed.version === 1 ? parsed : null;
+    return parsed.version === 1 ? normalizeSharedDesign(parsed) : null;
   } catch {
     return null;
   }
@@ -63,16 +64,26 @@ export function clearSharedDesignFromUrl() {
   window.history.replaceState(null, "", url.toString());
 }
 
-export function downloadSharedDesign(payload: SharedDesign) {
+export function downloadJson(filename: string, payload: unknown) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json",
   });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "machine-frame-design.json";
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function normalizeSharedDesign(payload: SharedDesign): SharedDesign {
+  return {
+    ...payload,
+    scenario: {
+      ...payload.scenario,
+      designLimits: normalizeDesignLimits(payload.scenario.designLimits),
+    },
+  };
 }
 
 function encodeDesign(payload: SharedDesign) {

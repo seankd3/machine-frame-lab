@@ -2,9 +2,8 @@ import { getFill } from "../data/materials";
 import { getRail } from "../data/rails";
 import type { MachineScenario, ProfileSpec } from "../model/types";
 import {
-  ProfileSourceCrop,
+  ProfileSectionArt,
   profileShape,
-  profileSourceForShape,
   type ProfileShape,
 } from "./ProfileGlyph";
 
@@ -17,7 +16,6 @@ const view = { width: 420, height: 320 };
 
 export function CadProfileCutaway({ profile, scenario }: CadProfileCutawayProps) {
   const shape = profileShape(profile);
-  const source = profileSourceForShape(shape);
   const rail = getRail(scenario.rail.modelId);
   const fill = getFill(scenario.fill.mediumId);
   const hasRails = rail.id !== "none";
@@ -61,14 +59,13 @@ export function CadProfileCutaway({ profile, scenario }: CadProfileCutawayProps)
       </g>
 
       <g className="cad-profile-stack">
-        <ProfileSourceCrop
-          source={source}
+        <ProfileSectionArt
+          shape={shape}
           x={drawingX}
           y={drawingY}
           width={drawingW}
           height={drawingH}
           className="cad-profile-source"
-          imageClassName="cad-profile-image"
         />
       </g>
 

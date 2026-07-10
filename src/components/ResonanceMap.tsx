@@ -6,39 +6,69 @@ interface ResonanceMapProps {
 }
 
 export function ResonanceMap({ analysis }: ResonanceMapProps) {
-  const maxHz = Math.max(analysis.toothPassingHz, ...analysis.beam.frequenciesHz.slice(0, 3), 250) * 1.1;
+  const modes = analysis.beam.frequenciesHz.slice(0, 4);
+  const plottedFrequencies = [analysis.spindleHz, analysis.toothPassingHz, ...modes].filter(
+    (frequency) => Number.isFinite(frequency) && frequency > 0,
+  );
+  const minHz = Math.max(10, Math.min(...plottedFrequencies) * 0.72);
+  const maxHz = Math.max(...plottedFrequencies, 250) * 1.12;
+  const safer = analysis.resonance.saferRpm;
+  const position = (frequency: number) => {
+    const ratio = Math.log(Math.max(frequency, minHz) / minHz) / Math.log(maxHz / minHz);
+    return `${Math.min(98, Math.max(2, ratio * 100))}%`;
+  };
 
   return (
     <section className="resonance-map">
       <div className="section-title compact">
-        <h2>Resonance map</h2>
+        <h2>Operating resonance</h2>
+      </div>
+      <div className="resonance-legend" aria-label="Resonance marker legend">
+        <span><i className="legend-mode" /> Structural modes</span>
+        <span><i className="legend-spindle" /> Spindle</span>
+        <span><i className="legend-tooth" /> Tooth pass</span>
       </div>
       <div className="frequency-track">
-        {analysis.beam.frequenciesHz.slice(0, 3).map((frequency, index) => (
+        {modes.map((frequency, index) => (
           <span
             className="mode-marker"
-            style={{ left: `${Math.min(96, (frequency / maxHz) * 100)}%` }}
+            style={{ left: position(frequency) }}
             key={frequency}
             title={`Mode ${index + 1}: ${formatFrequency(frequency)}`}
           />
         ))}
         <span
           className="excitation spindle"
-          style={{ left: `${Math.min(96, (analysis.spindleHz / maxHz) * 100)}%` }}
+          style={{ left: position(analysis.spindleHz) }}
           title={`Spindle: ${formatFrequency(analysis.spindleHz)}`}
         />
         <span
           className="excitation tooth"
-          style={{ left: `${Math.min(96, (analysis.toothPassingHz / maxHz) * 100)}%` }}
+          style={{ left: position(analysis.toothPassingHz) }}
           title={`Tooth passing: ${formatFrequency(analysis.toothPassingHz)}`}
         />
       </div>
       <div className="frequency-labels">
-        <span>0</span>
+        <span>{formatFrequency(minHz)}</span>
         <span>{formatFrequency(maxHz)}</span>
       </div>
-      <p className="compact-note">
-        Margin {analysis.modalMarginPct.toFixed(0)}% between cutting excitation and the closest structural mode.
+      <p className="frequency-scale-note">Log frequency scale</p>
+      <div className="resonance-readout">
+        <span>Spindle {formatFrequency(analysis.spindleHz)}</span>
+        <span>Tooth pass {formatFrequency(analysis.toothPassingHz)}</span>
+        <span>Modes {modes.map((mode) => formatFrequency(mode)).join(" / ")}</span>
+        <strong>
+          Nearest: {analysis.resonance.nearestExcitationLabel} to{" "}
+          {formatFrequency(analysis.resonance.nearestModeHz)} mode,{" "}
+          {analysis.resonance.nearestMarginPct.toFixed(1)}% margin
+        </strong>
+      </div>
+      <p className={`compact-note resonance-advice ${analysis.resonance.toothPassesLimit ? "pass" : "fail"}`}>
+        {analysis.resonance.toothPassesLimit
+          ? `Tooth-pass separation meets the selected ${analysis.designLimits.minModalSeparationPct.toFixed(0)}% margin.`
+          : safer
+            ? `Tooth pass fails the selected margin. Nearest safer move: ${safer.direction} to ${safer.rpm.toFixed(0)} rpm (${safer.marginPct.toFixed(1)}% tooth-pass margin).`
+            : "Tooth pass fails the selected margin and no safer nearby RPM exists inside 500-24000 rpm."}
       </p>
     </section>
   );

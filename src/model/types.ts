@@ -2,6 +2,7 @@ export type SupportType = "simply-supported" | "fixed-fixed" | "cantilever";
 export type LoadAxis = "vertical" | "lateral";
 export type PreloadClass = "light" | "medium" | "heavy";
 export type RiskLevel = "low" | "watch" | "high";
+export type CriterionStatus = "pass" | "watch" | "fail";
 
 export interface ProfileSpec {
   id: string;
@@ -67,8 +68,15 @@ export interface MachineScenario {
   rpm: number;
   flutes: number;
   movingMassKg: number;
+  designLimits: DesignLimits;
   rail: RailSelection;
   fill: FillSelection;
+}
+
+export interface DesignLimits {
+  maxDynamicDeflectionUm: number;
+  minFirstModeHz: number;
+  minModalSeparationPct: number;
 }
 
 export interface CompositeSection {
@@ -109,6 +117,39 @@ export interface ScenarioAnalysis {
   riskLevel: RiskLevel;
   nearestExcitationHz: number;
   nearestModeHz: number;
+  designLimits: DesignLimits;
+  criteria: CriterionEvaluation[];
+  controllingCriterion?: CriterionEvaluation;
+  resonance: ResonanceReadout;
+}
+
+export interface CriterionEvaluation {
+  id: "dynamic-deflection" | "first-mode" | "modal-separation";
+  label: string;
+  status: CriterionStatus;
+  value: number;
+  limit: number;
+  unit: string;
+  marginPct: number;
+  summary: string;
+}
+
+export interface ResonanceReadout {
+  spindleHz: number;
+  toothPassingHz: number;
+  nearestModeHz: number;
+  nearestExcitationHz: number;
+  nearestExcitationLabel: "Spindle" | "Tooth pass";
+  nearestMarginPct: number;
+  nearestToothModeHz: number;
+  toothMarginPct: number;
+  toothPassesLimit: boolean;
+  saferRpm?: {
+    rpm: number;
+    direction: "lower" | "higher";
+    toothPassingHz: number;
+    marginPct: number;
+  };
 }
 
 export interface McmasterDetection {

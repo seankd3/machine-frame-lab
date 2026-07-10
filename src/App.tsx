@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { HeaderBar } from "./components/HeaderBar";
 import { ProfileIntake } from "./components/ProfileIntake";
 import { ScenarioControls } from "./components/ScenarioControls";
+import { DesignLimitsControls } from "./components/DesignLimitsControls";
 import { RailControls } from "./components/RailControls";
 import { FillControls } from "./components/FillControls";
 import { KpiGrid } from "./components/KpiGrid";
 import { VerdictPanel } from "./components/VerdictPanel";
+import { ConfidencePanel } from "./components/ConfidencePanel";
 import { FrameVisualizer } from "./components/FrameVisualizer";
 import { ModeShapeChart } from "./components/ModeShapeChart";
 import { ResonanceMap } from "./components/ResonanceMap";
@@ -21,6 +23,7 @@ import {
   saveDraftDesign,
 } from "./model/share";
 import type { MachineScenario, ProfileSpec } from "./model/types";
+import { DEFAULT_DESIGN_LIMITS } from "./model/limits";
 
 const initialScenario: MachineScenario = {
   profileId: "tslot-4080-heavy",
@@ -32,6 +35,7 @@ const initialScenario: MachineScenario = {
   rpm: 7800,
   flutes: 3,
   movingMassKg: 18,
+  designLimits: DEFAULT_DESIGN_LIMITS,
   rail: {
     modelId: "hgr20",
     topCount: 2,
@@ -86,6 +90,7 @@ export default function App() {
       <HeaderBar
         analysis={analysis}
         design={design}
+        profile={activeProfile}
         onReset={resetDesign}
       />
 
@@ -107,6 +112,7 @@ export default function App() {
           </div>
           <div className="input-column setup-column">
             <ScenarioControls scenario={scenario} onScenarioChange={setScenario} />
+            <DesignLimitsControls scenario={scenario} onScenarioChange={setScenario} />
             <RailControls scenario={scenario} onScenarioChange={setScenario} />
           </div>
         </aside>
@@ -122,13 +128,22 @@ export default function App() {
 
         <aside className="panel panel-right">
           <VerdictPanel analysis={analysis} />
+          <ConfidencePanel
+            analysis={analysis}
+            customProfile={customProfile}
+            profile={activeProfile}
+          />
           <KpiGrid analysis={analysis} />
           <ResonanceMap analysis={analysis} />
           <ScenarioComparison profile={activeProfile} scenario={scenario} />
         </aside>
       </main>
 
-      <AssumptionPanel analysis={analysis} profile={activeProfile} />
+      <AssumptionPanel
+        analysis={analysis}
+        customProfile={customProfile}
+        profile={activeProfile}
+      />
     </div>
   );
 }

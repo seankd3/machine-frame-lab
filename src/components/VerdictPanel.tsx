@@ -28,8 +28,11 @@ export function VerdictPanel({ analysis }: VerdictPanelProps) {
       </div>
 
       <div className="verdict-reasons">
-        {verdict.reasons.map((reason) => (
-          <span key={reason}>{reason}</span>
+        {analysis.criteria.map((criterion) => (
+          <span className={`criterion-chip criterion-${criterion.status}`} key={criterion.id}>
+            <strong>{criterion.status}</strong>
+            {criterion.summary}
+          </span>
         ))}
       </div>
 

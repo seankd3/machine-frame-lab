@@ -1,53 +1,58 @@
 import type { ProfileSpec } from "../model/types";
 
 export type ProfileShape = "single" | "double" | "triple" | "quad" | "double-quad";
-export type ProfileSource = {
-  url: string;
-  viewBox: string;
-  width: number;
-  height: number;
-  aspect: number;
-};
 
 interface ProfileGlyphProps {
   shape: ProfileShape;
   className?: string;
 }
 
-const mcmasterProfileSources: Record<ProfileShape, ProfileSource> = {
-  single: source(
-    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/d5251e63-c8ec-485f-831f-baeff9028907/4212575733954.svg",
-    "0 0 43.2293 42.7119",
-  ),
-  double: source(
-    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/a935f390-e7c8-4913-8256-fcfc4d4e5450/1097894526489.svg",
-    "0 0 44 90.2889",
-  ),
-  triple: source(
-    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/471c4a4f-7737-4d66-b32a-1017fa59e1bd/205912552540.svg",
-    "0 0 44.16 127.9405",
-  ),
-  quad: source(
-    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/9d68464a-14fd-43b8-a0a3-b6f7bc517b74/3895473700269.svg",
-    "0 0 93 93",
-  ),
-  "double-quad": source(
-    "https://www.mcmaster.com/prerenderstable/mvPRE/Contents/BOSS1/1744693200000/ddd2f878-8de2-4d62-a884-75a8f228ad0e/7749718419406.svg",
-    "0 0 94.9 190",
-  ),
-};
+interface ProfileSectionArtProps {
+  shape: ProfileShape;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  className?: string;
+}
 
 export function ProfileGlyph({ shape, className }: ProfileGlyphProps) {
-  const source = profileSourceForShape(shape);
+  const { width, height } = sectionSize(shape);
 
   return (
     <svg
       className={["profile-glyph", className].filter(Boolean).join(" ")}
-      viewBox={source.viewBox}
+      viewBox={`0 0 ${width} ${height}`}
       role="img"
       aria-label={`${shapeLabel(shape)} T-slot profile`}
     >
-      <SourceImage source={source} />
+      <ProfileSectionGeometry shape={shape} />
+    </svg>
+  );
+}
+
+export function ProfileSectionArt({
+  shape,
+  x = 0,
+  y = 0,
+  width,
+  height,
+  className = "profile-section-art",
+}: ProfileSectionArtProps) {
+  const size = sectionSize(shape);
+
+  return (
+    <svg
+      className={className}
+      x={x}
+      y={y}
+      width={width ?? size.width}
+      height={height ?? size.height}
+      viewBox={`0 0 ${size.width} ${size.height}`}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden="true"
+    >
+      <ProfileSectionGeometry shape={shape} />
     </svg>
   );
 }
@@ -55,10 +60,9 @@ export function ProfileGlyph({ shape, className }: ProfileGlyphProps) {
 export function HeightGlyph() {
   return (
     <svg className="height-glyph" viewBox="0 0 68 54" role="img" aria-label="Rail height">
-      <ProfileSourceCrop source={mcmasterProfileSources.single} x={7} y={9} height={32} />
+      <ProfileSectionArt shape="single" x={7} y={9} width={32} height={32} />
       <line x1="52" y1="9" x2="52" y2="41" />
-      <path d="M 47 14 L 52 9 L 57 14" />
-      <path d="M 47 36 L 52 41 L 57 36" />
+      <path className="height-arrow" d="M 47 14 L 52 9 L 57 14 M 47 36 L 52 41 L 57 36" />
     </svg>
   );
 }
@@ -84,77 +88,76 @@ export function shapeLabel(shape: ProfileShape) {
   return labels[shape];
 }
 
-export function profileSourceForShape(shape: ProfileShape): ProfileSource {
-  return mcmasterProfileSources[shape];
-}
-
 export function profileCellLayout(shape: ProfileShape) {
   if (shape === "double") return { cols: 1, rows: 2 };
   if (shape === "triple") return { cols: 1, rows: 3 };
-  if (shape === "quad") return { cols: 1, rows: 1 };
-  if (shape === "double-quad") return { cols: 1, rows: 2 };
+  if (shape === "quad") return { cols: 2, rows: 2 };
+  if (shape === "double-quad") return { cols: 2, rows: 4 };
   return { cols: 1, rows: 1 };
 }
 
-export function ProfileSourceCrop({
-  source,
-  x,
-  y,
-  height,
-  width = height * source.aspect,
-  className = "profile-source-crop",
-  imageClassName = "profile-source-image",
-}: {
-  source: ProfileSource;
-  x: number;
-  y: number;
-  height: number;
-  width?: number;
-  className?: string;
-  imageClassName?: string;
-}) {
+function ProfileSectionGeometry({ shape }: { shape: ProfileShape }) {
+  const { cols, rows } = profileCellLayout(shape);
+  const width = cols * 100;
+  const height = rows * 100;
+  const cavities = Array.from({ length: cols * rows }, (_, index) => ({
+    col: index % cols,
+    row: Math.floor(index / cols),
+  }));
+
   return (
-    <svg
-      className={className}
-      x={x}
-      y={y}
-      width={width}
-      height={height}
-      viewBox={source.viewBox}
-      preserveAspectRatio="xMidYMid meet"
-    >
-      <SourceImage source={source} imageClassName={imageClassName} />
-    </svg>
+    <g className="profile-section-geometry">
+      <rect className="profile-section-body" x="4" y="4" width={width - 8} height={height - 8} />
+      {cavities.map(({ col, row }) => {
+        const cx = col * 100 + 50;
+        const cy = row * 100 + 50;
+        return (
+          <g key={`${col}-${row}`}>
+            <path
+              className="profile-section-cavity"
+              d={`M ${cx - 19} ${cy - 25} H ${cx + 19} L ${cx + 25} ${cy - 19} V ${cy + 19} L ${cx + 19} ${cy + 25} H ${cx - 19} L ${cx - 25} ${cy + 19} V ${cy - 19} Z`}
+            />
+            <path
+              className="profile-section-rib"
+              d={`M ${cx - 25} ${cy - 19} L ${cx - 42} ${cy - 36} M ${cx + 25} ${cy - 19} L ${cx + 42} ${cy - 36} M ${cx - 25} ${cy + 19} L ${cx - 42} ${cy + 36} M ${cx + 25} ${cy + 19} L ${cx + 42} ${cy + 36}`}
+            />
+          </g>
+        );
+      })}
+      {Array.from({ length: cols }, (_, col) => {
+        const cx = col * 100 + 50;
+        return (
+          <g key={`horizontal-${col}`}>
+            <path className="profile-section-slot" d={`M ${cx - 15} 4 H ${cx + 15} V 12 H ${cx + 7} L ${cx} 22 L ${cx - 7} 12 H ${cx - 15} Z`} />
+            <path className="profile-section-slot" d={`M ${cx - 15} ${height - 4} H ${cx + 15} V ${height - 12} H ${cx + 7} L ${cx} ${height - 22} L ${cx - 7} ${height - 12} H ${cx - 15} Z`} />
+          </g>
+        );
+      })}
+      {Array.from({ length: rows }, (_, row) => {
+        const cy = row * 100 + 50;
+        return (
+          <g key={`vertical-${row}`}>
+            <path className="profile-section-slot" d={`M 4 ${cy - 15} V ${cy + 15} H 12 V ${cy + 7} L 22 ${cy} L 12 ${cy - 7} V ${cy - 15} Z`} />
+            <path className="profile-section-slot" d={`M ${width - 4} ${cy - 15} V ${cy + 15} H ${width - 12} V ${cy + 7} L ${width - 22} ${cy} L ${width - 12} ${cy - 7} V ${cy - 15} Z`} />
+          </g>
+        );
+      })}
+      {cols > 1 ? <line className="profile-section-web" x1="100" y1="28" x2="100" y2={height - 28} /> : null}
+      {Array.from({ length: rows - 1 }, (_, index) => (
+        <line
+          className="profile-section-web"
+          key={`row-web-${index}`}
+          x1="28"
+          y1={(index + 1) * 100}
+          x2={width - 28}
+          y2={(index + 1) * 100}
+        />
+      ))}
+    </g>
   );
 }
 
-function SourceImage({
-  source,
-  imageClassName = "profile-source-image",
-}: {
-  source: ProfileSource;
-  imageClassName?: string;
-}) {
-  return (
-    <image
-      className={imageClassName}
-      href={source.url}
-      x="0"
-      y="0"
-      width={source.width}
-      height={source.height}
-    />
-  );
-}
-
-function source(url: string, viewBox: string): ProfileSource {
-  const [, , width, height] = viewBox.split(/\s+/).map(Number);
-
-  return {
-    url,
-    viewBox,
-    width,
-    height,
-    aspect: width / height,
-  };
+function sectionSize(shape: ProfileShape) {
+  const { cols, rows } = profileCellLayout(shape);
+  return { width: cols * 100, height: rows * 100 };
 }

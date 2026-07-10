@@ -1,12 +1,16 @@
 import { Check, Download, Link } from "lucide-react";
 import { useState } from "react";
-import { createShareUrl, downloadSharedDesign, type SharedDesign } from "../model/share";
+import { buildAnalysisReport } from "../model/analysisReport";
+import { createShareUrl, downloadJson, type SharedDesign } from "../model/share";
+import type { ProfileSpec, ScenarioAnalysis } from "../model/types";
 
 interface ShareActionsProps {
   design: SharedDesign;
+  analysis: ScenarioAnalysis;
+  profile: ProfileSpec;
 }
 
-export function ShareActions({ design }: ShareActionsProps) {
+export function ShareActions({ analysis, design, profile }: ShareActionsProps) {
   const [status, setStatus] = useState<"idle" | "copied" | "ready">("idle");
   const [shareUrl, setShareUrl] = useState("");
 
@@ -27,8 +31,14 @@ export function ShareActions({ design }: ShareActionsProps) {
       <button
         className="status-pill share-button icon-only"
         type="button"
-        title="Download design JSON"
-        onClick={() => downloadSharedDesign(design)}
+        title="Download analysis report JSON"
+        aria-label="Download analysis report JSON"
+        onClick={() =>
+          downloadJson(
+            "machine-frame-analysis-report.json",
+            buildAnalysisReport({ analysis, profile, scenario: design.scenario }),
+          )
+        }
       >
         <Download size={16} />
       </button>

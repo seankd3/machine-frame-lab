@@ -1,5 +1,11 @@
 import { buildCompositeSection } from "./section";
-import { makeModeShape, runBeamFea } from "./beamFea";
+import { runBeamFea } from "./beamFea";
+import {
+  controllingCriterion,
+  evaluateDesignCriteria,
+  normalizeDesignLimits,
+} from "./limits";
+import { buildResonanceReadout } from "./resonance";
 import type { MachineScenario, ProfileSpec, RiskLevel, ScenarioAnalysis } from "./types";
 import { mmToM } from "./units";
 
@@ -13,45 +19,57 @@ export function analyzeScenario(
   const lengthM = mmToM(scenario.spanMm);
   const axisEiNm2 =
     scenario.axis === "vertical" ? section.eiVerticalNm2 : section.eiLateralNm2;
-  const modalMassKgM = section.massKgM + (scenario.movingMassKg * 0.45) / lengthM;
+  const designLimits = normalizeDesignLimits(scenario.designLimits);
   const beam = runBeamFea({
     lengthM,
     elements: ELEMENT_COUNT,
     eiNm2: axisEiNm2,
-    massKgM: modalMassKgM,
+    massKgM: section.massKgM,
+    pointMassKg: scenario.movingMassKg,
     loadN: scenario.loadN,
     loadPositionPct: scenario.loadPositionPct,
     support: scenario.support,
   });
 
-  const modeShapes = beam.frequenciesHz.slice(0, 3).map((frequencyHz, index) => ({
-    mode: index + 1,
-    frequencyHz,
-    points: makeModeShape(scenario.support, index + 1),
-  }));
   const toothPassingHz = (scenario.rpm * scenario.flutes) / 60;
   const spindleHz = scenario.rpm / 60;
-  const resonance = nearestResonance(beam.frequenciesHz, [spindleHz, toothPassingHz]);
+  const resonance = buildResonanceReadout(
+    beam.frequenciesHz,
+    scenario.rpm,
+    scenario.flutes,
+    designLimits.minModalSeparationPct,
+  );
   const dynamicAmplification = amplification(
     resonance.nearestModeHz,
     resonance.nearestExcitationHz,
     section.dampingRatio,
   );
   const dynamicDeflectionM = beam.maxDeflectionM * dynamicAmplification;
+  const baseAnalysis = {
+    beam,
+    dynamicDeflectionM,
+    modalMarginPct: resonance.nearestMarginPct,
+  };
+  const criteria = evaluateDesignCriteria(baseAnalysis, designLimits);
+  const controlling = controllingCriterion(criteria);
 
   return {
     section,
-    beam: { ...beam, modeShapes },
+    beam,
     axisEiNm2,
     totalMassKg: section.massKgM * lengthM + scenario.movingMassKg,
     toothPassingHz,
     spindleHz,
     dynamicAmplification,
     dynamicDeflectionM,
-    modalMarginPct: resonance.marginPct,
-    riskLevel: riskFromMargin(resonance.marginPct, dynamicAmplification),
+    modalMarginPct: resonance.nearestMarginPct,
+    riskLevel: riskFromCriteria(criteria),
     nearestExcitationHz: resonance.nearestExcitationHz,
     nearestModeHz: resonance.nearestModeHz,
+    designLimits,
+    criteria,
+    controllingCriterion: controlling,
+    resonance,
   };
 }
 
@@ -86,25 +104,6 @@ export function comparisonScenarios(scenario: MachineScenario) {
   ];
 }
 
-function nearestResonance(modes: number[], excitations: number[]) {
-  let nearestModeHz = modes[0] ?? 1;
-  let nearestExcitationHz = excitations[0] ?? 1;
-  let marginPct = Number.POSITIVE_INFINITY;
-
-  modes.forEach((mode) => {
-    excitations.forEach((excitation) => {
-      const margin = Math.abs(mode - excitation) / mode * 100;
-      if (margin < marginPct) {
-        marginPct = margin;
-        nearestModeHz = mode;
-        nearestExcitationHz = excitation;
-      }
-    });
-  });
-
-  return { nearestModeHz, nearestExcitationHz, marginPct };
-}
-
 function amplification(modeHz: number, excitationHz: number, dampingRatio: number) {
   if (!modeHz || !excitationHz) return 1;
   const ratio = excitationHz / modeHz;
@@ -112,8 +111,8 @@ function amplification(modeHz: number, excitationHz: number, dampingRatio: numbe
   return Math.min(12, Math.max(1, 1 / denominator));
 }
 
-function riskFromMargin(marginPct: number, amplificationValue: number): RiskLevel {
-  if (marginPct < 8 || amplificationValue > 5) return "high";
-  if (marginPct < 18 || amplificationValue > 2.2) return "watch";
+function riskFromCriteria(criteria: ScenarioAnalysis["criteria"]): RiskLevel {
+  if (criteria.some((criterion) => criterion.status === "fail")) return "high";
+  if (criteria.some((criterion) => criterion.status === "watch")) return "watch";
   return "low";
 }
