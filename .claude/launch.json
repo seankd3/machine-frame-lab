@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "dev", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5173", "--strictPort"], "port": 5173 },
+    { "name": "before", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "preview", "--port", "4173", "--strictPort", "--outDir", "C:/Users/smast/AppData/Local/Temp/claude/C--Users-smast-OneDrive-Desktop-Projects-hardware-cad-machine-frame-lab/6e25e894-44f5-4584-922d-f134aa27b2de/scratchpad/before"], "port": 4173 }
+  ]
+}
