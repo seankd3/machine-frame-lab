@@ -13,5 +13,5 @@
     "noUnusedLocals": true,
     "jsx": "react-jsx"
   },
-  "files": ["src/main.tsx", "src/vite-env.d.ts", "src/model/beam.test.ts", "src/fea/frame.test.ts", "src/machine/compile.ts"]
+  "files": ["src/main.tsx", "src/vite-env.d.ts", "src/model/beam.test.ts", "src/fea/frame.test.ts", "src/machine/buildcheck.test.ts"]
 }

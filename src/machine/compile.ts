@@ -171,7 +171,7 @@ class Compiler {
     this.asm.rigid(railNode, c);
     const kk: [number, number, number, number, number, number] = [k, k, k, 0, 0, 0];
     kk["xyz".indexOf(along)] = 0;
-    const dNode = this.asm.hinge(c, kk, "carriage");
+    const dNode = this.asm.hinge(c, kk, `carriage-${along}`);
     this.asm.rigid(dNode, body);
     this.asm.mass(dNode, g.block.massKg);
   }
