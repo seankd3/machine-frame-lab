@@ -2,22 +2,42 @@
 
 Design a DIY CNC router from parts you can actually buy, and find out how stiff, how fast and how expensive it will be before you order anything.
 
-You describe a moving-gantry router in about twenty choices: travel, base stock (80/20 extrusion or steel tube), joinery, gantry beam, plate thickness, and a rail, drive and motor for each axis, plus a spindle, a controller and a design cutting force. From that the app compiles every part:
+It works the way a design brief does: requirements first, parts second.
 
-- **3D model**: extrusions, rails and carriages, ball screws and supports, motors, plates, gussets and fasteners, placed where they would go. Jog the axes or press **Run** to sweep the gantry through its travel. Click any part to see its catalogue item, cut length, mass and price.
-- **Frame physics**: a 3D beam-and-spring finite-element model built from the same placement calls as the picture. It covers member sections, joint springs, carriage stiffness from HIWIN tables, and ball-screw, nut and bearing axial stiffness. It reports:
-  - tool-tip stiffness and deflection in X, Y and Z;
-  - which subsystem the deflection comes from (**Where it bends**);
-  - the lowest vibration modes, with the part of the machine each one lives in.
-- **Motion**: moving mass, acceleration and rapid speed per axis, from published pull-out torque curves. Rapids are limited by the motor, by screw whip (critical speed) or by ball-nut DN, whichever comes first. Torque is derated when the controller's drivers cannot supply the motor's rated current.
-- **Findings**: plain-language warnings, such as deflection past a chip load, a low first mode, current-starved motors, slow rapids, joinery that doesn't suit the stock, and screws longer than the priced kit.
-- **Bill of materials**: parts grouped by assembly, with quantities, cut lists, 80/20 cut fees, vendor links and a CSV export.
+1. **Requirements.** You choose:
+   - the material you will cut (wood, aluminium or steel);
+   - the work area and a budget;
+   - a pace (hobby, standard or production);
+   - whether you can weld.
 
-Layout: inputs on the left, the machine in the centre, results on the right. The URL hash holds the whole design, so **Copy share link** shares the exact machine.
+   These become numeric targets. Material sets the design cutting force and a deflection limit of about one chip thickness. Pace sets rapid and acceleration floors. The first-mode floor is derived: an acceleration step *a* leaves the tool ringing with amplitude *a/ω²*, so keeping that inside the deflection limit needs *f₁ ≥ √(a/δ)/2π*.
+2. **Find designs.** A search walks the catalog of priced parts from your current design and every preset at once, on a pool of web workers. From each starting point it:
+   - meets every target for the least added cost;
+   - cuts cost while keeping every target met;
+   - spends what is left of the budget on stiffness.
+
+   It returns up to three candidates: **Cheapest that passes**, **Balanced** (30 % stiffness headroom) and **Stiffest in budget**. When nothing passes, it shows the closest design and names what it misses. It never picks an unpriced part or a joint you cannot make, and it leaves your spindle and gantry clearance alone. Preview a candidate in 3D, adopt it, and undo if you change your mind.
+3. **Refine.** Every design is scored against the requirements. **Suggested changes** try every single change to the current design (about 100 variants, in a worker) and list the best fixes with their price and effect. The **Explore** tab plots all of them as cost against deflection.
+
+Under the hood, the design compiles into:
+
+- **3D model:**
+  - extrusions, rails and carriages, ball screws and supports, motors, plates, gussets and fasteners, placed where they would go;
+  - rendered on demand, with standard views (keys 0/1/7/3);
+  - jog the axes, or press **Run** to sweep the gantry through its travel;
+  - click any part to inspect it.
+- **Frame physics:** a 3D beam-and-spring finite-element model built by the same calls that place the parts. It covers member sections, joint springs, carriage stiffness from HIWIN tables, and ball-screw, nut and bearing axial stiffness. From it come tool-tip stiffness per axis, the compliance budget (where the deflection comes from) and vibration modes. The search uses a fast first-mode estimate (inverse iteration, within 0.4 % of the full solve), and finalists get the full modal analysis.
+- **Motion:**
+  - moving mass, acceleration and rapids per axis, from published pull-out torque curves;
+  - rapids limited by motor torque, screw whip or ball-nut DN, whichever comes first;
+  - torque derated when the drivers cannot supply the motor's rated current.
+- **Bill of materials:** grouped by assembly, with quantities, cut lists, cut fees, vendor links and CSV export.
+
+The URL holds the requirements and the design together, so **Copy link** shares both.
 
 ## Where the numbers come from
 
-Every price and stiffness figure has a source recorded in [`docs/research/parts-and-prices.md`](docs/research/parts-and-prices.md). Prices were read on 27 Sep 2026 and are single-unit USD before shipping and tax. A quoted range bills at its midpoint, with the range shown beside it. **Anything without a source stays unpriced** and is listed as such, so the BOM total is a floor, not an estimate. The largest unpriced items are cut aluminium plate and some fasteners.
+Every price and stiffness figure has a source recorded in [`docs/research/parts-and-prices.md`](docs/research/parts-and-prices.md). Prices were read on 27 Sep 2026 and are single-unit USD before shipping and tax. A quoted range bills at its midpoint, with the range shown beside it. **Anything without a source stays unpriced** and is listed as such, so the BOM total is a floor, not an estimate. Most 80/20 profiles are still unpriced because 8020.net refuses automated reads. The search never chooses an unpriced part.
 
 Section properties for 80/20 profiles come from the 8020.net product pages. Rail and carriage data comes from HIWIN catalogue G99TE24-2410, motor curves from StepperOnline datasheets, and belt stiffness from the Gates design manual.
 
@@ -42,9 +62,12 @@ Code map:
 | `src/machine/document.ts` | The machine document and its URL-hash form |
 | `src/machine/compile.ts` | Document → placed parts + FE model |
 | `src/machine/simulate.ts` | Stiffness, compliance budget, modes, axis motion |
-| `src/machine/checks.ts` | Findings and their thresholds |
+| `src/machine/requirements.ts` | Requirements, derived targets, scorecard |
+| `src/machine/explore.ts` | One-change variants and their ranking |
+| `src/machine/search.ts`, `design.ts` | Requirements-driven design search, multi-start |
+| `src/machine/checks.ts` | Engineering findings (current, joinery, fit) |
 | `src/machine/bom.ts` | Bill of materials |
-| `src/machine/analysis.worker.ts` | Runs the analysis off the main thread |
+| `src/machine/*.worker.ts`, `src/app/pool.ts` | Analysis, exploration and the search pool, off the main thread |
 | `src/catalog/` | Stock, rails, drives, motors, spindles, controllers, hardware, with prices |
 | `src/fea/frame.ts` | Sparse 3D frame FE solver |
 | `src/render/`, `src/geometry/` | three.js scene and part geometry |

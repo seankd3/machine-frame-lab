@@ -10,13 +10,15 @@ interface Props {
   set: (key: string, value: string | number) => void;
   load: (m: Machine) => void;
   setReq: (patch: Partial<Requirements>) => void;
+  onFind: () => void;
+  searching: boolean;
 }
 
 const budgetField: NumberField = { kind: "number", label: "Budget", min: BUDGET.min, max: BUDGET.max, step: BUDGET.step, unit: "USD", hint: "Cap on the priced parts total" };
 
 const get = (m: Machine, key: string) => key.split(".").reduce<any>((o, p) => o[p], m) as string | number;
 
-export function InputPanel({ machine, req, set, load, setReq }: Props) {
+export function InputPanel({ machine, req, set, load, setReq, onFind, searching }: Props) {
   const field = (key: string) => {
     const f = fields[key];
     const value = get(machine, key);
@@ -76,6 +78,13 @@ export function InputPanel({ machine, req, set, load, setReq }: Props) {
           </div>
         </div>
       </Section>
+
+      <div className="find">
+        <button className="btn primary wide" onClick={onFind} disabled={searching}>
+          {searching ? "Searching…" : "Find designs that meet these →"}
+        </button>
+        <p className="note">Searches priced parts from your design and each preset. Keeps your work area, spindle and gantry clearance.</p>
+      </div>
 
       <Section n="01" title="Starting point">
         <div className="presets" role="radiogroup" aria-label="Start from a preset">

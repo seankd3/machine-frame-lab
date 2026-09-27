@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Part } from "../machine/assembly";
 import type { Compiled } from "../machine/compile";
 import { Viewport, type Jog, type ViewName } from "../render/Viewport";
@@ -14,7 +14,15 @@ const VIEWS: Array<{ name: ViewName; label: string; key: string }> = [
   { name: "side", label: "Side", key: "3" },
 ];
 
-export function Stage({ compiled }: { compiled: Compiled }) {
+interface StageProps {
+  compiled: Compiled;
+  /** Shown over the viewport's lower half (the candidate sheet); hides the axis readout. */
+  overlay?: ReactNode;
+  /** A banner across the top, e.g. while previewing a candidate. */
+  banner?: ReactNode;
+}
+
+export function Stage({ compiled, overlay, banner }: StageProps) {
   const { work } = compiled.machine;
   const [jog, setJog] = useState<Jog>({ x: 0, y: 0, z: 0 });
   const [picked, setPicked] = useState<Part | null>(null);
@@ -127,7 +135,9 @@ export function Stage({ compiled }: { compiled: Compiled }) {
         </div>
       )}
 
-      <div className="dro" role="group" aria-label="Axis positions">
+      {banner}
+      {overlay}
+      <div className="dro" role="group" aria-label="Axis positions" hidden={!!overlay}>
         {axes.map(({ a, min, max, pos }) => (
           <label key={a} className="dro-axis">
             <span className="axis-tag">{a.toUpperCase()}</span>

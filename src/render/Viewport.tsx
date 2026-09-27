@@ -64,6 +64,7 @@ export function Viewport({ compiled, jog, picked, view, onPick }: ViewportProps)
   const start = VIEW_DIRS.iso.map((v) => v * radius) as [number, number, number];
   return (
     <Canvas
+      frameloop="demand"
       shadows="percentage"
       style={{ position: "absolute", inset: 0 }}
       dpr={[1, 2]}
@@ -109,6 +110,7 @@ export function Viewport({ compiled, jog, picked, view, onPick }: ViewportProps)
 function CameraRig({ view, radius, target }: { view: ViewportProps["view"]; radius: number; target: [number, number, number] }) {
   const controls = useThree((s) => s.controls) as unknown as { target: THREE.Vector3; update(): void } | null;
   const camera = useThree((s) => s.camera);
+  const invalidate = useThree((s) => s.invalidate);
   const move = useRef<{ from: THREE.Vector3; to: THREE.Vector3; fromT: THREE.Vector3; toT: THREE.Vector3; t: number } | null>(null);
 
   useEffect(() => {
@@ -116,6 +118,7 @@ function CameraRig({ view, radius, target }: { view: ViewportProps["view"]; radi
     const dir = new THREE.Vector3(...VIEW_DIRS[view.name]).normalize();
     const to = new THREE.Vector3(...target).addScaledVector(dir, radius * (view.name === "iso" ? 1.36 : 1.75));
     move.current = { from: camera.position.clone(), to, fromT: controls.target.clone(), toT: new THREE.Vector3(...target), t: 0 };
+    invalidate();
     // Only a new request moves the camera, not a resize of the machine.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, controls]);
@@ -128,24 +131,27 @@ function CameraRig({ view, radius, target }: { view: ViewportProps["view"]; radi
     camera.position.lerpVectors(m.from, m.to, e);
     controls.target.lerpVectors(m.fromT, m.toT, e);
     controls.update();
+    // Rendering is on demand: keep asking for frames until the move lands.
     if (m.t >= 1) move.current = null;
+    else invalidate();
   });
   return null;
 }
 
 function Studio({ radius }: { radius: number }) {
-  const { gl, scene } = useThree();
+  const { gl, scene, invalidate } = useThree();
   useEffect(() => {
     const pmrem = new THREE.PMREMGenerator(gl);
     const env = pmrem.fromScene(new RoomEnvironment(), 0.03).texture;
     scene.environment = env;
     scene.environmentIntensity = 0.9;
+    invalidate();
     return () => {
       scene.environment = null;
       env.dispose();
       pmrem.dispose();
     };
-  }, [gl, scene]);
+  }, [gl, scene, invalidate]);
   return (
     <>
       <hemisphereLight args={["#dde6f0", "#2a2622", 0.4]} />

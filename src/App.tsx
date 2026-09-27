@@ -1,8 +1,9 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { InputPanel } from "./app/InputPanel";
 import { OutputPanel } from "./app/OutputPanel";
 import { Stage } from "./app/Stage";
-import { useAnalysis, useDesign, useExplore } from "./app/hooks";
+import { CandidateSheet, Welcome } from "./app/Candidates";
+import { useAnalysis, useDesign, useDesignSearch, useExplore } from "./app/hooks";
 import { money, sig } from "./app/format";
 import { PRICES_READ } from "./catalog/types";
 import { bom as billOf } from "./machine/bom";
@@ -23,7 +24,10 @@ function designId(text: string) {
 }
 
 export default function App() {
-  const { machine, req, set, load, setReq } = useDesign();
+  const [firstVisit, setFirstVisit] = useState(() => !window.location.hash);
+  const { machine, req, set, load, change, undo, canUndo, setReq } = useDesign();
+  const { search, start, cancel, dismiss } = useDesignSearch();
+  const [preview, setPreview] = useState<typeof machine | null>(null);
   const lastGood = useRef<Compiled | null>(null);
   const compiled = useMemo(() => {
     try {
@@ -34,9 +38,36 @@ export default function App() {
     return lastGood.current!;
   }, [machine]);
   const bom = useMemo(() => billOf(compiled), [compiled]);
+  const previewCompiled = useMemo(() => (preview ? compile(preview) : null), [preview]);
+
+  const find = () => {
+    setFirstVisit(false);
+    setPreview(null);
+    void start(machine, req);
+  };
+  const use = (m: typeof machine) => {
+    load(m);
+    setPreview(null);
+    dismiss();
+  };
+  const closeSheet = () => {
+    setPreview(null);
+    dismiss();
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault();
+        undo();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undo]);
   const massKg = useMemo(() => compiled.asm.parts.reduce((s, p) => s + p.massKg, 0), [compiled]);
   const { result, pending } = useAnalysis(machine);
-  const ex = useExplore(machine);
+  const ex = useExplore(machine, search.status !== "running");
   const goals = useMemo(() => goalsFor(req), [req]);
   const [copied, setCopied] = useState(false);
 
@@ -103,14 +134,40 @@ export default function App() {
             </dd>
           </div>
         </dl>
+        <button className="btn" onClick={undo} disabled={!canUndo} title="Undo the last adopted design or applied suggestion (Ctrl+Z)">
+          Undo
+        </button>
         <button className="btn" onClick={share}>
           {copied ? "Link copied" : "Copy link"}
         </button>
       </header>
 
-      <InputPanel machine={machine} req={req} set={set} load={load} setReq={setReq} />
-      <Stage compiled={compiled} />
-      <OutputPanel machine={machine} req={req} targets={targets} result={result} pending={pending} bom={bom} ex={ex} goals={goals} apply={set} />
+      <InputPanel machine={machine} req={req} set={set} load={load} setReq={setReq} onFind={find} searching={search.status === "running"} />
+      <Stage
+        compiled={previewCompiled ?? compiled}
+        banner={
+          preview && (
+            <div className="preview-banner">
+              <span className="pane-title">Previewing candidate</span>
+              <span>The results panel still shows your current design.</span>
+              <button className="btn primary" onClick={() => use(preview)}>
+                Use this design
+              </button>
+              <button className="btn" onClick={() => setPreview(null)}>
+                Back to current
+              </button>
+            </div>
+          )
+        }
+        overlay={
+          search.status !== "idle" ? (
+            <CandidateSheet search={search} goals={goals} budget={req.budget} preview={preview} onPreview={setPreview} onUse={use} onCancel={cancel} onClose={closeSheet} />
+          ) : firstVisit ? (
+            <Welcome onFind={find} onDismiss={() => setFirstVisit(false)} />
+          ) : undefined
+        }
+      />
+      <OutputPanel machine={machine} req={req} targets={targets} result={result} pending={pending} bom={bom} ex={ex} goals={goals} apply={change} />
 
       <footer className="statusbar" aria-live="polite">
         <span className={`state ${solver}`}>
