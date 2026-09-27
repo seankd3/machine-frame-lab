@@ -145,15 +145,17 @@ export function rank(base: Quick, variants: Variant[], goals: Goals) {
   }));
   // Only changes the builder can make are suggestions; the chart still shows the rest.
   const allowed = s.filter((x) => goals.weld || !x.quick.welded);
+  // Respect the budget while the design is inside it; once over, still show every fix with its cost.
+  const affordable = (x: Suggestion) => base.cost > goals.budget || x.quick.cost <= goals.budget;
   // Stiffness bought per dollar; a free change ranks first only when its price is known.
   const value = (x: Suggestion) => (x.priceUnknown ? -x.dDeflection / Math.max(x.dCost, 50) / 10 : x.dCost <= 0 ? Infinity : -x.dDeflection / x.dCost);
 
   const stiffer = allowed
-    .filter((x) => x.dDeflection < -0.03 * base.deflectionUm && x.quick.rapidMmMin >= Math.min(base.rapidMmMin, goals.rapidMmMin) && x.quick.cost <= goals.budget)
+    .filter((x) => x.dDeflection < -0.03 * base.deflectionUm && x.quick.rapidMmMin >= Math.min(base.rapidMmMin, goals.rapidMmMin) && affordable(x))
     .sort((a, b) => value(b) - value(a) || a.dDeflection - b.dDeflection);
 
   const faster = allowed
-    .filter((x) => x.quick.rapidMmMin > base.rapidMmMin * 1.05 && x.quick.deflectionUm <= Math.max(base.deflectionUm, goals.deflectionUm) && x.quick.cost <= goals.budget)
+    .filter((x) => x.quick.rapidMmMin > base.rapidMmMin * 1.05 && x.quick.deflectionUm <= Math.max(base.deflectionUm, goals.deflectionUm) && affordable(x))
     .sort((a, b) => b.quick.rapidMmMin - a.quick.rapidMmMin);
 
   const baseMeets = {

@@ -101,11 +101,15 @@ const METALS_DEPOT = "https://www.metalsdepot.com/steel-products/steel-rectangle
 /** Metals Depot A500 tube, quoted per foot in 24 ft lengths. */
 const perFoot = (usd: number, note: string) => priced("Metals Depot", METALS_DEPOT, Math.round((usd / 0.3048) * 100) / 100, "m", { note });
 
+/** Speedy Metals square tube, quoted per foot for short lengths. */
+const speedy = (usd: number, path: string, note: string) =>
+  priced("Speedy Metals", `https://www.speedymetals.com/${path}`, Math.round((usd / 0.3048) * 100) / 100, "m", { note });
+
 export const stock: Stock[] = [
   ...profiles.map(tslot),
-  tube("tube-2x2x0.125", 'Steel tube 2" × 2" × 1/8"', 2, 2, 0.125),
+  tube("tube-2x2x0.125", 'Steel tube 2" × 2" × 1/8"', 2, 2, 0.125, speedy(8.88, "pc-4790-8251-2-sq-x-76864-wall-square-steel-tubing.aspx", "priced as 11 ga (0.120″) wall; short-length rate")),
   tube("tube-3x2x0.125", 'Steel tube 3" × 2" × 1/8"', 2, 3, 0.125, perFoot(9.12, "priced as 11 ga (0.120″) wall; 24 ft lengths")),
-  tube("tube-3x3x0.1875", 'Steel tube 3" × 3" × 3/16"', 3, 3, 0.1875),
+  tube("tube-3x3x0.1875", 'Steel tube 3" × 3" × 3/16"', 3, 3, 0.1875, speedy(17.76, "p-4797-3-sq-x-1203264-wall-square-steel-tubing.aspx", "short-length rate")),
   tube("tube-4x2x0.1875", 'Steel tube 4" × 2" × 3/16"', 2, 4, 0.1875, perFoot(15.45, "24 ft lengths")),
 ];
 

@@ -48,6 +48,7 @@ const guide = (
 const mc = (q: string) => `https://motionconstrained.com/search?q=${q}`;
 const clone = "Chinese clone sets run far cheaper: 2× HGR20 1 m + 4 blocks $53–80 on Amazon";
 const railPerM = (q: string, usd: number, lengthMm: number, note?: string) => priced("Motion Constrained", mc(q), Math.round((usd / (lengthMm / 1000)) * 100) / 100, "m", { note: note ?? `genuine HIWIN, ${lengthMm} mm length $${usd}` });
+const MC_STORE = "https://motionconstrained.com/store/hiwin-linear-guides/hiwin-hg-series-linear-guides/";
 const block = (q: string, usd: number) => priced("Motion Constrained", mc(q), usd, "each", { note: "genuine HIWIN" });
 
 export const guides: Guide[] = [
@@ -55,8 +56,20 @@ export const guides: Guide[] = [
   guide("MGN15", [15, 10, 40, 1.06, 3], { id: "MGN15H", l: 58.8, w: 32, h: 16, holes: [25, 25], bolt: 3, kg: 0.092, k: 134 }, railPerM("MGNR15", 164.44, 1020), block("MGN15H", 34.33)),
   guide("HGR15", [15, 15, 60, 1.45, 4], { id: "HGH15CA", l: 61.4, w: 34, h: 28, holes: [26, 26], bolt: 4, kg: 0.18, k: 196 }, railPerM("HGR15", 98.7, 1000), block("HGH15CA", 34.97)),
   guide("HGR20", [20, 17.5, 60, 2.21, 5], { id: "HGH20CA", l: 77.5, w: 44, h: 30, holes: [32, 36], bolt: 5, kg: 0.3, k: 232 }, railPerM("HGR20", 107.63, 1000, `genuine HIWIN, 1000 mm length $107.63. ${clone}`), block("HGH20CA", 44.9)),
-  guide("HGR25", [23, 22, 60, 3.21, 6], { id: "HGH25CA", l: 84, w: 48, h: 40, holes: [35, 35], bolt: 6, kg: 0.51, k: 292 }),
-  guide("HGR30", [28, 26, 80, 4.47, 8], { id: "HGH30CA", l: 97.4, w: 60, h: 45, holes: [40, 40], bolt: 8, kg: 0.88, k: 354 }),
+  guide(
+    "HGR25",
+    [23, 22, 60, 3.21, 6],
+    { id: "HGH25CA", l: 84, w: 48, h: 40, holes: [35, 35], bolt: 6, kg: 0.51, k: 292 },
+    priced("Motion Constrained", `${MC_STORE}hg-rails-only/hiwin-hgr25r-linear-guideway/`, 121.44, "m", { note: "genuine HIWIN, 1000 mm length $121.44" }),
+    priced("Motion Constrained", `${MC_STORE}hg-blocks-only/hiwin-hgh25cazac-square-block/`, 57.45, "each", { note: "genuine HIWIN, ZA preload (stiffer than the Z0 figure modelled)" }),
+  ),
+  guide(
+    "HGR30",
+    [28, 26, 80, 4.47, 8],
+    { id: "HGH30CA", l: 97.4, w: 60, h: 45, holes: [40, 40], bolt: 8, kg: 0.88, k: 354 },
+    priced("Motion Constrained", `${MC_STORE}hg-rails-only/hiwin-hgr30r-linear-guideway-rail/`, 158.05, "m", { note: "genuine HIWIN, 1000 mm length $158.05" }),
+    priced("Motion Constrained", `${MC_STORE}hg-blocks-only/hiwin-hgh30cazac-square-block/`, 75.57, "each", { note: "genuine HIWIN, ZA preload (stiffer than the Z0 figure modelled)" }),
+  ),
 ];
 
 export interface BallScrew {
@@ -87,13 +100,19 @@ export interface Belt {
 export type Drive = BallScrew | Belt;
 
 /** Amazon kits: 1000 mm screw, nut, housing and BK/BF supports in one box. */
-const kitPrices: Record<string, [number, number]> = { SFU1605: [62, 65], SFU1610: [115, 115], SFU2005: [130, 130] };
+const kitPrices: Record<string, [number, number, string?, string?]> = {
+  SFU1605: [62, 65],
+  SFU1610: [115, 115],
+  SFU2005: [130, 130],
+  SFU2010: [99, 99, "FastToBuy", "https://www.fasttobuy.com/ballscrew-sfu2010-l1000mm-c7-bkbf15-support-20h-nut-bracker-for-cnc-router_p36326.html"],
+};
 const KIT_NOTE = "1000 mm kit; longer screws cost more";
 
 const ballscrew = (d: number, lead: number, root: number, nutK: number, nutKg: number): BallScrew => {
   const id = `SFU${d}${String(lead).padStart(2, "0")}`;
-  const url = `https://www.amazon.com/s?k=${id.toLowerCase()}+ball+screw+kit`;
   const kit = kitPrices[id];
+  const vendor = kit?.[2] ?? "Amazon";
+  const url = kit?.[3] ?? `https://www.amazon.com/s?k=${id.toLowerCase()}+ball+screw+kit`;
   return {
   id,
   kind: "ballscrew",
@@ -101,11 +120,11 @@ const ballscrew = (d: number, lead: number, root: number, nutK: number, nutKg: n
   leadMm: lead,
   rootMm: root,
   // The kit price covers the screw, so the screw itself bills at zero when a kit is priced.
-  screw: { sku: `screw-${id}`, name: `${id} rolled ball screw, C7`, offer: kit ? priced("Amazon", url, 0, "m", { note: "in the kit price" }) : unpriced("Amazon", url, "m") },
+  screw: { sku: `screw-${id}`, name: `${id} rolled ball screw, C7`, offer: kit ? priced(vendor, url, 0, "m", { note: "in the kit price" }) : unpriced(vendor, url, "m") },
   kit: {
     sku: `kit-${id}`,
     name: `${id} kit: nut, housing, BK/BF${d <= 16 ? 12 : 15} supports`,
-    offer: kit ? (kit[0] === kit[1] ? priced("Amazon", url, kit[0], "each", { note: KIT_NOTE }) : range("Amazon", url, kit[0], kit[1], "each", KIT_NOTE)) : unpriced("Amazon", url),
+    offer: kit ? (kit[0] === kit[1] ? priced(vendor, url, kit[0], "each", { note: KIT_NOTE }) : range(vendor, url, kit[0], kit[1], "each", KIT_NOTE)) : unpriced(vendor, url),
   },
   nutStiffnessNPerUm: nutK,
   // THK BK12 / BK15 axial rigidity; generic clones are likely softer.
@@ -129,8 +148,16 @@ export const drives: Drive[] = [
     widthMm: 9,
     specificStiffnessN: 25400,
     pulleyTeeth: 20,
-    belt: { sku: "belt-GT2-9", name: "GT2 9 mm glass-fibre belt", offer: unpriced("Amazon", "https://www.amazon.com/s?k=gt2+9mm+belt", "m") },
-    kit: { sku: "pulley-GT2-9", name: "GT2 20T pulley and idlers", offer: unpriced("Amazon", "https://www.amazon.com/s?k=gt2+20t+pulley+9mm") },
+    belt: {
+      sku: "belt-GT2-9",
+      name: "GT2 9 mm glass-fibre belt",
+      offer: priced("West3D", "https://west3d.com/products/gates-gt2-open-belt-ll-2gt-9-9mm-wide-voron-v0-v1-v2-switchwire", 6.5, "m", { note: "genuine Gates LL-2GT-9" }),
+    },
+    kit: {
+      sku: "pulley-GT2-9",
+      name: "GT2 20T pulley and idler",
+      offer: priced("West3D", "https://west3d.com/products/pulleys-and-idlers-gt2-20t-gt2-16t", 2.98, "each", { note: "one pulley ($1.29) + one idler ($1.69), generic, 5 mm bore" }),
+    },
   },
   {
     id: "GT3-15",
@@ -139,7 +166,11 @@ export const drives: Drive[] = [
     widthMm: 15,
     specificStiffnessN: 73400,
     pulleyTeeth: 20,
-    belt: { sku: "belt-GT3-15", name: "GT3 15 mm glass-fibre belt", offer: unpriced("Amazon", "https://www.amazon.com/s?k=gt3+15mm+belt", "m") },
+    belt: {
+      sku: "belt-GT3-15",
+      name: "GT3 15 mm glass-fibre belt",
+      offer: priced("V-Belt Outlet", "https://vbeltoutlet.com/product/3gt-timing-belt-3gt-open-synchronous-timing-belt-replacement/", 6.5, "m", { note: "generic neoprene, glass-fibre cord" }),
+    },
     kit: { sku: "pulley-GT3-15", name: "GT3 20T pulley and idlers", offer: unpriced("Amazon", "https://www.amazon.com/s?k=gt3+20t+pulley+15mm") },
   },
 ];
@@ -168,7 +199,7 @@ export const motors: Motor[] = [
   // 17HS19 is its 24 V curve; 23HS22 has no published curve, so it is the
   // 23HS30 curve scaled by holding torque; 23HS45's chart stops at 420 rpm.
   { id: "17HS19", sku: "17HS19-2004S1", name: "NEMA 17 stepper, 0.59 N·m", frameMm: 42, lengthMm: 48, shaftMm: 5, holdingNm: 0.59, ratedA: 2.0, rotorKgM2: 82e-7, massKg: 0.39, curve: [[90, 0.43], [300, 0.42], [450, 0.39], [600, 0.33], [750, 0.23]], offer: stepperonline("17HS19-2004S1", 9.62) },
-  { id: "23HS22", sku: "23HS22-2804S", name: "NEMA 23 stepper, 1.26 N·m", frameMm: 57, lengthMm: 56, shaftMm: 6.35, holdingNm: 1.26, ratedA: 2.8, rotorKgM2: 300e-7, massKg: 0.7, curve: [[90, 1.22], [300, 1.17], [600, 0.74], [990, 0.4], [1500, 0.12]], offer: stepperonline("23HS22-2804S") },
+  { id: "23HS22", sku: "23HS22-2804S", name: "NEMA 23 stepper, 1.26 N·m", frameMm: 57, lengthMm: 56, shaftMm: 6.35, holdingNm: 1.26, ratedA: 2.8, rotorKgM2: 300e-7, massKg: 0.7, curve: [[90, 1.22], [300, 1.17], [600, 0.74], [990, 0.4], [1500, 0.12]], offer: priced("Oyostepper", "https://www.oyostepper.com/goods-73-Nema-23-Stepper-Motor-Bipolar-18-deg-126Nm-1784ozin-28A-25V-57x57x56mm-4-Wires.html", 19.87, "each", { note: "StepperOnline's sister store" }) },
   { id: "23HS30", sku: "23HS30-2804S", name: "NEMA 23 stepper, 1.9 N·m", frameMm: 57, lengthMm: 76.5, shaftMm: 6.35, holdingNm: 1.9, ratedA: 2.8, rotorKgM2: 440e-7, massKg: 1.1, curve: [[90, 1.84], [300, 1.76], [390, 1.56], [510, 1.28], [600, 1.12], [810, 0.88], [990, 0.6], [1200, 0.4], [1500, 0.18]], offer: stepperonline("23HS30-2804S", 18.26, "now listed at 2.0 N·m") },
   { id: "23HS45", sku: "23HS45-4204S", name: "NEMA 23 stepper, 3.0 N·m", frameMm: 57, lengthMm: 113, shaftMm: 10, holdingNm: 3.0, ratedA: 4.2, rotorKgM2: 800e-7, massKg: 1.6, curve: [[60, 2.5], [150, 2.31], [300, 2.07], [420, 1.84]], offer: stepperonline("23HS45-4204S", 28.7) },
 ];
