@@ -1,142 +1,75 @@
-import { useId, type ChangeEvent, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useId, useState, type CSSProperties, type ReactNode } from "react";
+import { numbers, type Design } from "../model/design";
 
-interface NumberFieldProps {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step?: number;
-  unit?: string;
-  onChange: (value: number) => void;
-}
+export type Update = (patch: Partial<Design>) => void;
+type NumberKey = keyof typeof numbers;
 
-interface SelectFieldProps {
-  label: string;
-  value: string;
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string) => void;
-}
-
-export function PanelSection({
-  title,
-  icon,
-  children,
-  className,
-}: {
-  title: string;
-  icon?: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <section className={["panel-section", className].filter(Boolean).join(" ")}>
-      <div className="section-title">
-        {icon}
-        <h2>{title}</h2>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-export function NumberField({
-  label,
-  value,
-  min,
-  max,
-  step = 1,
-  unit,
-  onChange,
-}: NumberFieldProps) {
+/** Slider plus typed entry for one numeric design field; range comes from the spec. */
+export function NumberField({ name, design, update }: { name: NumberKey; design: Design; update: Update }) {
+  const spec = numbers[name];
+  const value = design[name];
   const id = useId();
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const nextValue = Number(event.target.value);
-    if (!Number.isFinite(nextValue)) return;
+  const [draft, setDraft] = useState(String(value));
+  useEffect(() => setDraft(String(value)), [value]);
 
-    onChange(clamp(nextValue, min, max));
+  const commit = (text: string) => {
+    const next = Number(text);
+    if (text.trim() === "" || !Number.isFinite(next)) return setDraft(String(value));
+    update({ [name]: Math.min(spec.max, Math.max(spec.min, next)) });
   };
-  const progress = `${Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100))}%`;
-  const rangeStyle = { "--range-progress": progress } as CSSProperties;
+  const progress = { "--progress": `${((value - spec.min) / (spec.max - spec.min)) * 100}%` } as CSSProperties;
 
   return (
-    <div className="control-field number-field">
-      <span className="control-label-row">
-        <label htmlFor={`${id}-range`}>{label}</label>
-        <strong>{formatReadout(value, step, unit)}</strong>
-      </span>
-      <div className="number-row">
+    <div className="field number-field">
+      <label htmlFor={id}>{spec.label}</label>
+      <div className="number-entry">
         <input
-          id={`${id}-range`}
-          type="range"
-          value={value}
-          min={min}
-          max={max}
-          step={step}
-          aria-label={`${label} slider`}
-          style={rangeStyle}
-          onChange={handleChange}
+          inputMode="decimal"
+          value={draft}
+          aria-label={`${spec.label} value`}
+          onChange={(event) => setDraft(event.target.value)}
+          onBlur={(event) => commit(event.target.value)}
+          onKeyDown={(event) => event.key === "Enter" && commit(event.currentTarget.value)}
         />
-        <input
-          className="number-input"
-          type="number"
-          value={value}
-          min={min}
-          max={max}
-          step={step}
-          aria-label={`${label} value`}
-          onChange={handleChange}
-        />
+        {spec.unit ? <span>{spec.unit}</span> : null}
       </div>
+      <input
+        id={id}
+        type="range"
+        min={spec.min}
+        max={spec.max}
+        step={spec.step}
+        value={value}
+        style={progress}
+        onChange={(event) => update({ [name]: Number(event.target.value) })}
+      />
     </div>
   );
 }
 
-function formatReadout(value: number, step: number, unit?: string) {
-  const decimals = step < 1 ? String(step).split(".")[1]?.length ?? 2 : 0;
-  const raw = value.toFixed(decimals);
-  const rounded = decimals > 0 ? raw.replace(/\.?0+$/u, "") : raw;
-  return unit ? `${rounded} ${unit}` : rounded;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-export function SelectField({ label, value, options, onChange }: SelectFieldProps) {
-  return (
-    <label className="control-field">
-      <span>{label}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => (
-          <option value={option.value} key={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-export function SegmentedControl<T extends string>({
+export function Segmented<T extends string | number>({
   label,
   value,
   options,
   onChange,
 }: {
-  label: string;
+  label?: string;
   value: T;
-  options: Array<{ value: T; label: string }>;
+  options: Array<{ value: T; label: ReactNode; disabled?: boolean }>;
   onChange: (value: T) => void;
 }) {
   return (
-    <div className="control-field">
-      <span>{label}</span>
-      <div className="segmented">
+    <div className="field">
+      {label ? <span className="field-label">{label}</span> : null}
+      <div className="segmented" role="radiogroup" aria-label={label}>
         {options.map((option) => (
           <button
             type="button"
-            className={value === option.value ? "active" : ""}
-            key={option.value}
+            role="radio"
+            aria-checked={option.value === value}
+            className={option.value === value ? "on" : ""}
+            disabled={option.disabled}
+            key={String(option.value)}
             onClick={() => onChange(option.value)}
           >
             {option.label}
@@ -144,5 +77,17 @@ export function SegmentedControl<T extends string>({
         ))}
       </div>
     </div>
+  );
+}
+
+export function Group({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
+  return (
+    <section className="group">
+      <header>
+        <h2>{title}</h2>
+        {aside}
+      </header>
+      {children}
+    </section>
   );
 }

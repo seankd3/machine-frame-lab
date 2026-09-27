@@ -1,27 +1,17 @@
-import type { RiskLevel } from "../model/types";
+const digits = (value: number) => (Math.abs(value) < 10 ? 1 : 0);
 
-export function formatMicrons(meters: number) {
-  return `${(meters * 1e6).toFixed(meters * 1e6 >= 100 ? 0 : 1)} um`;
+export const um = (value: number) => `${value.toFixed(digits(value))} µm`;
+export const hz = (value: number) => `${Math.round(value)} Hz`;
+export const kgm = (value: number) => `${value.toFixed(value < 10 ? 2 : 1)} kg/m`;
+export const kg = (value: number) => `${value.toFixed(1)} kg`;
+export const rpm = (value: number) => `${Math.round(value).toLocaleString("en-US")} rpm`;
+export const pct = (value: number) => `${(value * 100).toFixed(1)} %`;
+export const kNm2 = (value: number) => `${(value / 1000).toFixed(1)} kN·m²`;
+
+/** "40 × 80 mm" or "1.5 × 3 in", in the profile's own unit system. */
+export function envelope(widthMm: number, heightMm: number, system: "inch" | "metric") {
+  if (system === "metric") return `${trim(widthMm)} × ${trim(heightMm)} mm`;
+  return `${trim(widthMm / 25.4)} × ${trim(heightMm / 25.4)} in`;
 }
 
-export function formatFrequency(value: number) {
-  return `${value.toFixed(value >= 100 ? 0 : 1)} Hz`;
-}
-
-export function formatMass(value: number) {
-  return `${value.toFixed(value >= 10 ? 1 : 2)} kg`;
-}
-
-export function formatMassPerMeter(value: number) {
-  return `${value.toFixed(value >= 10 ? 1 : 2)} kg/m`;
-}
-
-export function formatStiffness(nPerM: number) {
-  return `${(nPerM / 1e6).toFixed(1)} N/um`;
-}
-
-export function riskLabel(risk: RiskLevel) {
-  if (risk === "high") return "High";
-  if (risk === "watch") return "Watch";
-  return "Clear";
-}
+const trim = (value: number) => String(Number(value.toFixed(2)));

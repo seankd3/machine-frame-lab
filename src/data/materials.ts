@@ -1,51 +1,31 @@
-import type { FillMedium } from "../model/types";
+export const ALUMINUM = { eGPa: 69, densityKgM3: 2700 }; // 6063-T6, 8020.net
+export const STEEL = { eGPa: 200, densityKgM3: 7850 };
 
-export const ALUMINUM_E_GPA = 69;
-export const ALUMINUM_DAMPING_LOSS = 0.002;
+/**
+ * Damping ratio assumed for the bare frame. Bolted aluminium structures
+ * measure roughly 1–3 %, almost all of it from joints; 1 % is the cautious end.
+ */
+export const FRAME_DAMPING = 0.01;
 
-export const fills: FillMedium[] = [
-  {
-    id: "none",
-    name: "Hollow",
-    densityKgM3: 0,
-    eGPa: 0,
-    dampingLoss: 0,
-    stiffnessEfficiency: 0,
-  },
-  {
-    id: "dry-sand",
-    name: "Dry sand",
-    densityKgM3: 1600,
-    eGPa: 0.15,
-    dampingLoss: 0.08,
-    stiffnessEfficiency: 0.03,
-  },
-  {
-    id: "cement-grout",
-    name: "Cement grout",
-    densityKgM3: 1900,
-    eGPa: 8,
-    dampingLoss: 0.025,
-    stiffnessEfficiency: 0.24,
-  },
-  {
-    id: "epoxy-granite",
-    name: "Epoxy granite",
-    densityKgM3: 2200,
-    eGPa: 18,
-    dampingLoss: 0.04,
-    stiffnessEfficiency: 0.38,
-  },
-  {
-    id: "polymer-concrete",
-    name: "Polymer concrete",
-    densityKgM3: 2150,
-    eGPa: 22,
-    dampingLoss: 0.032,
-    stiffnessEfficiency: 0.45,
-  },
+export interface Fill {
+  id: "hollow" | "sand" | "epoxy-granite";
+  label: string;
+  densityKgM3: number;
+  /** Modulus credited in bending. Granular fill carries no bending stress. */
+  eGPa: number;
+  /** Material loss factor η; its share of the beam's mass adds η/2 to ζ. */
+  lossFactor: number;
+}
+
+export const fills: Fill[] = [
+  { id: "hollow", label: "Hollow", densityKgM3: 0, eGPa: 0, lossFactor: 0 },
+  // Particle damping in dry sand is friction between grains; η ≈ 0.1 is a rough
+  // figure from sand-filled tube tests and varies strongly with packing.
+  { id: "sand", label: "Dry sand", densityKgM3: 1600, eGPa: 0, lossFactor: 0.1 },
+  // Commercial mineral casting: E 35–45 GPa, ρ 2.3 (Schneeberger, RAMPF
+  // EPUMENT 140/8), log decrement 0.03 → η ≈ 0.0095. Hand-mixed DIY epoxy
+  // granite packs less densely, so 30 GPa is credited.
+  { id: "epoxy-granite", label: "Epoxy granite", densityKgM3: 2300, eGPa: 30, lossFactor: 0.0095 },
 ];
 
-export function getFill(id: string) {
-  return fills.find((fill) => fill.id === id) ?? fills[0];
-}
+export const getFill = (id: string) => fills.find((f) => f.id === id);

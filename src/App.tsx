@@ -1,134 +1,120 @@
-import { useEffect, useMemo, useState } from "react";
-import { HeaderBar } from "./components/HeaderBar";
-import { ProfileIntake } from "./components/ProfileIntake";
-import { ScenarioControls } from "./components/ScenarioControls";
-import { RailControls } from "./components/RailControls";
-import { FillControls } from "./components/FillControls";
-import { KpiGrid } from "./components/KpiGrid";
-import { VerdictPanel } from "./components/VerdictPanel";
-import { FrameVisualizer } from "./components/FrameVisualizer";
-import { ModeShapeChart } from "./components/ModeShapeChart";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { BeamView } from "./components/BeamView";
+import type { Update } from "./components/ControlField";
+import { Icon } from "./components/Icon";
+import { LayerTable } from "./components/LayerTable";
+import { ProfileCatalog } from "./components/ProfileCatalog";
 import { ResonanceMap } from "./components/ResonanceMap";
-import { ScenarioComparison } from "./components/ScenarioComparison";
-import { AssumptionPanel } from "./components/AssumptionPanel";
+import { SectionView } from "./components/SectionView";
+import { SetupPanel } from "./components/SetupPanel";
+import { VerdictPanel } from "./components/VerdictPanel";
 import { profiles } from "./data/profiles";
-import { analyzeScenario } from "./model/scenario";
-import {
-  clearDraftDesign,
-  clearSharedDesignFromUrl,
-  readDraftDesign,
-  readSharedDesign,
-  saveDraftDesign,
-} from "./model/share";
-import type { MachineScenario, ProfileSpec } from "./model/types";
+import { analyze, layers } from "./model/analysis";
+import { defaultDesign, formatDesign, parseDesign } from "./model/design";
 
-const initialScenario: MachineScenario = {
-  profileId: "tslot-4080-heavy",
-  spanMm: 1100,
-  support: "fixed-fixed",
-  axis: "vertical",
-  loadN: 950,
-  loadPositionPct: 50,
-  rpm: 7800,
-  flutes: 3,
-  movingMassKg: 18,
-  rail: {
-    modelId: "hgr20",
-    topCount: 2,
-    sideCount: 0,
-    boltPitchMm: 60,
-    preload: "medium",
-  },
-  fill: {
-    mediumId: "epoxy-granite",
-    ratio: 0.55,
-  },
-};
+const LAST = "machine-frame-lab:last";
+
+function initialDesign() {
+  if (location.hash.length > 1) return parseDesign(location.hash);
+  try {
+    return parseDesign(localStorage.getItem(LAST) ?? "");
+  } catch {
+    return defaultDesign;
+  }
+}
 
 export default function App() {
-  const startingDesign = useMemo(() => readSharedDesign() ?? readDraftDesign(), []);
-  const [scenario, setScenario] = useState<MachineScenario>(
-    startingDesign?.scenario ?? initialScenario,
-  );
-  const [customProfile, setCustomProfile] = useState<ProfileSpec | null>(
-    startingDesign?.customProfile ?? null,
-  );
-  const design = useMemo(
-    () => ({ version: 1 as const, scenario, customProfile }),
-    [customProfile, scenario],
-  );
-
-  const activeProfile = useMemo(() => {
-    if (customProfile && scenario.profileId === customProfile.id) {
-      return customProfile;
-    }
-
-    return profiles.find((profile) => profile.id === scenario.profileId) ?? profiles[0];
-  }, [customProfile, scenario.profileId]);
-
-  const analysis = useMemo(
-    () => analyzeScenario(activeProfile, scenario),
-    [activeProfile, scenario],
-  );
-  const resetDesign = () => {
-    clearDraftDesign();
-    clearSharedDesignFromUrl();
-    setCustomProfile(null);
-    setScenario(initialScenario);
-  };
+  const [design, setDesign] = useState(initialDesign);
+  const update: Update = useCallback((patch) => setDesign((d) => ({ ...d, ...patch })), []);
 
   useEffect(() => {
-    saveDraftDesign(design);
+    const encoded = formatDesign(design);
+    history.replaceState(null, "", `#${encoded}`);
+    try {
+      localStorage.setItem(LAST, encoded);
+    } catch {
+      // Storage can be blocked; the URL still holds the design.
+    }
   }, [design]);
+
+  useEffect(() => {
+    const onHash = () => setDesign(parseDesign(location.hash));
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  const analysis = useMemo(() => analyze(design), [design]);
+  const deferred = useDeferredValue(design);
+  const catalog = useMemo(() => profiles.map((p) => analyze({ ...deferred, profile: p.id })), [deferred]);
+  const layerRows = useMemo(
+    () => layers(deferred).map((layer) => ({ label: layer.label, analysis: analyze(layer.design) })),
+    [deferred],
+  );
 
   return (
     <div className="app">
-      <HeaderBar
-        analysis={analysis}
-        design={design}
-        onReset={resetDesign}
-      />
+      <header className="topbar">
+        <div className="brand">
+          <h1>Machine Frame Lab</h1>
+          <p>How far a CNC beam lets the tool move under cutting load.</p>
+        </div>
+        <div className={`status ${analysis.passes.all ? "ok" : "bad"}`} aria-hidden="true">
+          <Icon name={analysis.passes.all ? "check" : "cross"} size={14} />
+          <span>
+            {Math.round(analysis.worstUm * 10) / 10} µm · {Math.round(analysis.worstHz)} Hz
+          </span>
+        </div>
+        <div className="actions">
+          <CopyLink />
+          <button type="button" className="ghost" onClick={() => setDesign(defaultDesign)} title="Reset to the default design">
+            <Icon name="reset" />
+            <span>Reset</span>
+          </button>
+        </div>
+      </header>
 
-      <main className="workbench" aria-label="Machine frame simulation workspace">
-        <aside className="panel panel-left">
-          <div className="input-column profile-column">
-            <ProfileIntake
-              activeProfile={activeProfile}
-              customProfile={customProfile}
-              onApplyDetectedProfile={(profile) => {
-                setCustomProfile(profile);
-                setScenario((current) => ({ ...current, profileId: profile.id }));
-              }}
-              onProfileChange={(profileId) =>
-                setScenario((current) => ({ ...current, profileId }))
-              }
-            />
-            <FillControls scenario={scenario} onScenarioChange={setScenario} />
-          </div>
-          <div className="input-column setup-column">
-            <ScenarioControls scenario={scenario} onScenarioChange={setScenario} />
-            <RailControls scenario={scenario} onScenarioChange={setScenario} />
-          </div>
-        </aside>
-
-        <section className="stage">
-          <FrameVisualizer
-            profile={activeProfile}
-            scenario={scenario}
-            analysis={analysis}
-          />
-          <ModeShapeChart analysis={analysis} />
+      <main className="workbench">
+        <ProfileCatalog design={design} catalog={catalog} update={update} stale={deferred !== design} />
+        <SetupPanel analysis={analysis} update={update} />
+        <section className="stage" aria-label="Geometry">
+          <SectionView analysis={analysis} />
+          <BeamView analysis={analysis} update={update} />
         </section>
-
-        <aside className="panel panel-right">
-          <VerdictPanel analysis={analysis} />
-          <KpiGrid analysis={analysis} />
-          <ResonanceMap analysis={analysis} />
-          <ScenarioComparison profile={activeProfile} scenario={scenario} />
+        <aside className="results" aria-label="Results">
+          <VerdictPanel analysis={analysis} catalog={catalog} update={update} />
+          <ResonanceMap analysis={analysis} update={update} />
+          <LayerTable rows={layerRows} />
         </aside>
       </main>
 
-      <AssumptionPanel analysis={analysis} profile={activeProfile} />
+      <footer className="scope">
+        <p>
+          One beam, two bending planes: Euler-Bernoulli finite elements with the carriage as a point mass and rails
+          bolted fully composite. Not modelled: joints, end plates, torsion, carriage and spindle compliance, so a
+          whole machine will be softer. Section data from <a href="https://8020.net">80/20</a>, rails from the{" "}
+          <a href="https://www.hiwin.com/wp-content/uploads/HIWIN-Linear-Guideway-Catalog.pdf">HIWIN catalogue</a>.
+        </p>
+        <span>Sean Kenneth Doherty</span>
+      </footer>
     </div>
+  );
+}
+
+function CopyLink() {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(location.href);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      window.prompt("Copy this link", location.href);
+    }
+  };
+  return (
+    <button type="button" className="ghost" onClick={copy}>
+      <Icon name={copied ? "check" : "link"} />
+      <span>{copied ? "Copied" : "Copy link"}</span>
+    </button>
   );
 }

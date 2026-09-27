@@ -1,50 +1,9 @@
-import type { LoadAxis } from "../model/types";
+import type { Design } from "../model/design";
 
-export interface LoadPreset {
-  id: string;
-  name: string;
-  loadN: number;
-  rpm: number;
-  flutes: number;
-  movingMassKg: number;
-  axis: LoadAxis;
-}
-
-export const loadPresets: LoadPreset[] = [
-  {
-    id: "finish-pass",
-    name: "Finish pass",
-    loadN: 280,
-    rpm: 12000,
-    flutes: 2,
-    movingMassKg: 12,
-    axis: "vertical",
-  },
-  {
-    id: "aluminum-roughing",
-    name: "Aluminum roughing",
-    loadN: 950,
-    rpm: 7800,
-    flutes: 3,
-    movingMassKg: 18,
-    axis: "vertical",
-  },
-  {
-    id: "steel-light",
-    name: "Light steel cut",
-    loadN: 1450,
-    rpm: 4200,
-    flutes: 4,
-    movingMassKg: 22,
-    axis: "lateral",
-  },
-  {
-    id: "gantry-accel",
-    name: "Axis acceleration",
-    loadN: 650,
-    rpm: 9000,
-    flutes: 1,
-    movingMassKg: 28,
-    axis: "lateral",
-  },
+// Typical router cuts in 6061 with a 6 mm carbide end mill. Peak force is the
+// specific cutting force (~700 N/mm² for aluminium) times the chip section.
+export const cutPresets: Array<{ label: string; cut: Pick<Design, "forceN" | "rpm" | "flutes"> }> = [
+  { label: "Finish", cut: { forceN: 50, rpm: 20000, flutes: 3 } },
+  { label: "Adaptive rough", cut: { forceN: 150, rpm: 18000, flutes: 3 } },
+  { label: "Full slot", cut: { forceN: 200, rpm: 12000, flutes: 2 } },
 ];
