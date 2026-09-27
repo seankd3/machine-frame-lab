@@ -85,3 +85,6 @@ export function setPath(m: Machine, key: string, value: string | number): Machin
   path.set(next, String(value));
   return next;
 }
+
+/** Same machine, ignoring the design load (which follows the requirements). */
+export const sameDesign = (a: Machine, b: Machine) => formatMachine({ ...a, cutN: 0 }) === formatMachine({ ...b, cutN: 0 });

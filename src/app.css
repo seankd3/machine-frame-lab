@@ -1210,6 +1210,125 @@ tr:not(.lead) .gauge-fill.accent {
   opacity: 0.55;
 }
 
+/* requirements */
+
+.spec-line {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.spec-chip {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px 7px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.spec-chip.pass {
+  color: var(--ok);
+}
+
+.spec-chip.miss {
+  color: var(--bad);
+}
+
+.scorecard {
+  border-bottom: 1px solid var(--hair-2);
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 10px;
+}
+
+.verdict-mark {
+  width: 8px;
+  height: 8px;
+  background: var(--ok);
+}
+
+.scorecard.miss .verdict-mark {
+  background: var(--bad);
+}
+
+.verdict-text {
+  flex: 1;
+  font-weight: 500;
+  font-size: 13.5px;
+}
+
+.verdict-count {
+  font-size: 18px;
+  color: var(--text-2);
+}
+
+.scorecard.pass .verdict-count {
+  color: var(--ok);
+}
+
+.scorecard.miss .verdict-count {
+  color: var(--bad);
+}
+
+table.score {
+  border-top: 1px solid var(--hair);
+}
+
+table.score td {
+  padding: 6px 8px 6px 0;
+}
+
+table.score td:first-child {
+  padding-left: 14px;
+  width: 50px;
+}
+
+table.score td:last-child {
+  padding-right: 14px;
+}
+
+table.score tr.miss td:first-child {
+  box-shadow: inset 2px 0 0 var(--bad);
+}
+
+.score-code {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: var(--ok);
+}
+
+tr.miss .score-code {
+  color: var(--bad);
+}
+
+.score-label {
+  display: block;
+}
+
+.score-hint {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+tr.miss .score-value {
+  color: var(--bad);
+}
+
 /* bill of materials */
 
 .bom-head {

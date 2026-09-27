@@ -37,7 +37,7 @@ describe("build check", () => {
       expect(b.total, "sourced prices reach the BOM").toBeGreaterThan(100);
       for (const l of b.lines) if (l.total !== null) expect(Number.isFinite(l.total), l.name).toBe(true);
 
-      for (const f of checks(c, perf, first)) expect(f.title.length, f.title).toBeGreaterThan(0);
+      for (const f of checks(c, perf)) expect(f.title.length, f.title).toBeGreaterThan(0);
     });
   }
 });

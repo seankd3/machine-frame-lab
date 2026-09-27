@@ -1,17 +1,22 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { formatMachine, type Machine } from "../machine/document";
+import { sameDesign, type Machine } from "../machine/document";
 import { presets } from "../machine/presets";
+import { BUDGET, MATERIALS, PACES, type Material, type Pace, type Requirements } from "../machine/requirements";
 import { fields, type ChoiceField, type NumberField, type Option } from "./fields";
 
 interface Props {
   machine: Machine;
+  req: Requirements;
   set: (key: string, value: string | number) => void;
   load: (m: Machine) => void;
+  setReq: (patch: Partial<Requirements>) => void;
 }
+
+const budgetField: NumberField = { kind: "number", label: "Budget", min: BUDGET.min, max: BUDGET.max, step: BUDGET.step, unit: "USD", hint: "Cap on the priced parts total" };
 
 const get = (m: Machine, key: string) => key.split(".").reduce<any>((o, p) => o[p], m) as string | number;
 
-export function InputPanel({ machine, set, load }: Props) {
+export function InputPanel({ machine, req, set, load, setReq }: Props) {
   const field = (key: string) => {
     const f = fields[key];
     const value = get(machine, key);
@@ -20,16 +25,62 @@ export function InputPanel({ machine, set, load }: Props) {
     return <SelectRow key={key} id={key} field={f} value={String(value)} onChange={(v) => set(key, v)} />;
   };
 
-  const current = formatMachine(machine);
+  const mat = MATERIALS[req.material];
 
   return (
     <aside className="pane inputs" aria-label="Design parameters">
       <PaneHeader title="Parameters" />
 
-      <Section n="00" title="Baseline">
+      <Section n="00" title="Requirements">
+        <div className="prop">
+          <span className="prop-label">Material</span>
+          <div className="segmented" role="radiogroup" aria-label="Material">
+            {(Object.keys(MATERIALS) as Material[]).map((k) => (
+              <button key={k} role="radio" aria-checked={req.material === k} className={req.material === k ? "on" : ""} onClick={() => setReq({ material: k })}>
+                {MATERIALS[k].label}
+              </button>
+            ))}
+          </div>
+          <p className="spec-line">
+            <span>F {mat.cutN} N</span>
+            <span>δ ≤ {mat.deflectionUm} µm</span>
+            <span>f₁ ≥ {mat.minModeHz} Hz</span>
+          </p>
+        </div>
+        {field("work.x")}
+        {field("work.y")}
+        {field("work.z")}
+        <NumberRow id="req.budget" field={budgetField} value={req.budget} onChange={(v) => setReq({ budget: v })} />
+        <div className="prop">
+          <span className="prop-label">Pace</span>
+          <div className="segmented" role="radiogroup" aria-label="Pace">
+            {(Object.keys(PACES) as Pace[]).map((k) => (
+              <button key={k} role="radio" aria-checked={req.pace === k} className={req.pace === k ? "on" : ""} onClick={() => setReq({ pace: k })} title={PACES[k].blurb}>
+                {PACES[k].label}
+              </button>
+            ))}
+          </div>
+          <p className="spec-line">
+            <span>rapids ≥ {PACES[req.pace].rapidMmMin / 1000} m/min</span>
+            <span>a ≥ {PACES[req.pace].accelMs2} m/s²</span>
+          </p>
+        </div>
+        <div className="prop">
+          <span className="prop-label">Can you weld?</span>
+          <div className="segmented" role="radiogroup" aria-label="Welding available">
+            {[false, true].map((v) => (
+              <button key={String(v)} role="radio" aria-checked={req.weld === v} className={req.weld === v ? "on" : ""} onClick={() => setReq({ weld: v })}>
+                {v ? "Yes" : "No"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <Section n="01" title="Starting point">
         <div className="presets" role="radiogroup" aria-label="Start from a preset">
           {presets.map((p, i) => {
-            const on = formatMachine(p.machine) === current;
+            const on = sameDesign(p.machine, machine);
             return (
               <button key={p.id} role="radio" aria-checked={on} className={`preset ${on ? "on" : ""}`} onClick={() => load(p.machine)}>
                 <span className="preset-idx">P{i + 1}</span>
@@ -41,12 +92,6 @@ export function InputPanel({ machine, set, load }: Props) {
             );
           })}
         </div>
-      </Section>
-
-      <Section n="01" title="Work envelope">
-        {field("work.x")}
-        {field("work.y")}
-        {field("work.z")}
       </Section>
 
       <Section n="02" title="Base frame">
@@ -85,7 +130,6 @@ export function InputPanel({ machine, set, load }: Props) {
         {field("controller")}
       </Section>
 
-      <Section n="06" title="Load case">{field("cutN")}</Section>
     </aside>
   );
 }

@@ -2,7 +2,8 @@ import { useState, type ReactNode } from "react";
 import type { AnalysisResult } from "../machine/analyze";
 import type { Group } from "../machine/assembly";
 import type { Bom, BomLine } from "../machine/bom";
-import { DEFLECTION, MIN_MODE_HZ, type Finding } from "../machine/checks";
+import type { Finding } from "../machine/checks";
+import { MATERIALS, type Requirements, type Target } from "../machine/requirements";
 import type { Machine } from "../machine/document";
 import { AXES, type ModeSummary, type Performance } from "../machine/simulate";
 import { PRICES_READ } from "../catalog/types";
@@ -11,6 +12,8 @@ import { PaneHeader } from "./InputPanel";
 
 interface Props {
   machine: Machine;
+  req: Requirements;
+  targets: Target[] | null;
   result: AnalysisResult | null;
   pending: boolean;
   bom: Bom;
@@ -19,9 +22,11 @@ interface Props {
 type Tab = "analysis" | "bom";
 type Tone = "ok" | "warn" | "bad";
 
-const deflectionTone = (um: number): Tone => (um > DEFLECTION.soft ? "bad" : um > DEFLECTION.good ? "warn" : "ok");
+/** Over target fails; within 20 % of it is a warning. */
+const deflectionTone = (um: number, target: number): Tone => (um > target ? "bad" : um > target * 0.8 ? "warn" : "ok");
 
-export function OutputPanel({ machine, result, pending, bom }: Props) {
+export function OutputPanel(props: Props) {
+  const { bom } = props;
   const [tab, setTab] = useState<Tab>("analysis");
   return (
     <aside className="pane outputs" aria-label="Results">
@@ -35,7 +40,7 @@ export function OutputPanel({ machine, result, pending, bom }: Props) {
           </button>
         </div>
       </PaneHeader>
-      {tab === "analysis" ? <AnalysisTab machine={machine} result={result} pending={pending} bom={bom} /> : <BomTab bom={bom} />}
+      {tab === "analysis" ? <AnalysisTab {...props} /> : <BomTab bom={bom} />}
     </aside>
   );
 }
@@ -54,29 +59,52 @@ function Block({ title, meta, children }: { title: string; meta?: ReactNode; chi
 
 // ------------------------------------------------------------ analysis
 
-function AnalysisTab({ machine, result, pending, bom }: Props) {
+function AnalysisTab({ machine, req, targets, result, pending }: Props) {
   if (!result) return <p className="empty">Assembling stiffness matrix…</p>;
   if (!result.ok) return <p className="empty bad">Solve failed: {result.error}</p>;
   const { perf, modes, findings } = result.analysis;
   const worst = AXES.reduce((a, b) => (perf.deflection[b] > perf.deflection[a] ? b : a));
-  const w = perf.deflection[worst];
-  const first = modes[0]?.hz ?? 0;
+  const mat = MATERIALS[req.material];
 
   return (
     <div className={`pane-body ${pending ? "stale" : ""}`}>
-      <div className="readout-grid">
-        <Readout label={`Deflection δmax @ ${machine.cutN} N`} value={sig(w)} unit="µm" sub={`${AXIS_LABEL[worst]} axis`} tone={deflectionTone(w)} />
-        <Readout label="Stiffness kmin" value={sig(Math.min(...AXES.map((a) => perf.stiffness[a])))} unit="N/µm" sub="at the tool" tone={deflectionTone(w)} />
-        <Readout label="First mode f₁" value={first.toFixed(1)} unit="Hz" sub={`guide ≥ ${MIN_MODE_HZ} Hz`} tone={first < MIN_MODE_HZ ? "warn" : "ok"} />
-        <Readout label="Parts, priced" value={money(bom.total)} unit="" sub={bom.unpriced ? `${bom.unpriced} lines unpriced` : "fully priced"} />
-      </div>
-
+      {targets && <Scorecard targets={targets} />}
       {findings.length > 0 && <FindingLog findings={findings} />}
-      <Stiffness perf={perf} cutN={machine.cutN} />
+      <Stiffness perf={perf} cutN={machine.cutN} target={mat.deflectionUm} />
       <Budget perf={perf} initial={worst} />
       <Motion perf={perf} />
-      <Modes modes={modes} />
+      <Modes modes={modes} minHz={mat.minModeHz} />
     </div>
+  );
+}
+
+function Scorecard({ targets }: { targets: Target[] }) {
+  const misses = targets.filter((t) => !t.pass);
+  return (
+    <section className={`scorecard ${misses.length ? "miss" : "pass"}`}>
+      <header className="verdict">
+        <span className="verdict-mark" aria-hidden />
+        <span className="verdict-text">{misses.length ? `Misses ${misses.length} of ${targets.length} requirements` : "Meets every requirement"}</span>
+        <span className="verdict-count mono">
+          {targets.length - misses.length}/{targets.length}
+        </span>
+      </header>
+      <table className="data score">
+        <tbody>
+          {targets.map((t) => (
+            <tr key={t.key} className={t.pass ? "pass" : "miss"}>
+              <td className="score-code mono">{t.pass ? "PASS" : "MISS"}</td>
+              <td>
+                <span className="score-label">{t.label}</span>
+                {t.hint && <span className="score-hint">{t.hint}</span>}
+              </td>
+              <td className="r mono score-value">{t.value}</td>
+              <td className="r mono dim">{t.target}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
   );
 }
 
@@ -127,7 +155,7 @@ function FindingLog({ findings }: { findings: Finding[] }) {
   );
 }
 
-function Stiffness({ perf, cutN }: { perf: Performance; cutN: number }) {
+function Stiffness({ perf, cutN, target }: { perf: Performance; cutN: number; target: number }) {
   // Log scale from 5 µm to 1 mm, ticked at the chip-load and wood-only limits.
   const lo = Math.log10(5);
   const hi = Math.log10(1000);
@@ -153,9 +181,8 @@ function Stiffness({ perf, cutN }: { perf: Performance; cutN: number }) {
                 </th>
                 <td className="bar-col">
                   <span className="gauge">
-                    <span className={`gauge-fill ${deflectionTone(um)}`} style={{ width: `${x(um)}%` }} />
-                    <i style={{ left: `${x(DEFLECTION.good)}%` }} />
-                    <i style={{ left: `${x(DEFLECTION.soft)}%` }} />
+                    <span className={`gauge-fill ${deflectionTone(um, target)}`} style={{ width: `${x(um)}%` }} />
+                    <i style={{ left: `${x(target)}%` }} title={`Target ${target} µm`} />
                   </span>
                 </td>
                 <td className="r mono">{sig(um)}</td>
@@ -166,8 +193,7 @@ function Stiffness({ perf, cutN }: { perf: Performance; cutN: number }) {
         </tbody>
       </table>
       <p className="note">
-        Ticks: {DEFLECTION.good} µm ≈ one chip load in aluminium; {DEFLECTION.soft} µm = light wood passes only. Gantry and carriage centred, Z at the bottom of
-        travel.
+        Tick: the {target} µm target, about one chip thickness for the chosen material. Gantry and carriage centred, Z at the bottom of travel.
       </p>
     </Block>
   );
@@ -246,7 +272,7 @@ function Motion({ perf }: { perf: Performance }) {
   );
 }
 
-function Modes({ modes }: { modes: ModeSummary[] }) {
+function Modes({ modes, minHz }: { modes: ModeSummary[]; minHz: number }) {
   return (
     <Block title="Modal">
       <table className="data">
@@ -265,7 +291,7 @@ function Modes({ modes }: { modes: ModeSummary[] }) {
             return (
               <tr key={i}>
                 <td className="mono dim">{i + 1}</td>
-                <td className={`r mono ${m.hz < MIN_MODE_HZ ? "warn-text" : ""}`}>{m.hz.toFixed(1)}</td>
+                <td className={`r mono ${m.hz < minHz ? "warn-text" : ""}`}>{m.hz.toFixed(1)}</td>
                 <td className="name">
                   {top ? top.name : "Whole frame"} <span className="dim mono small">{top ? pct(top.share) : ""}</span>
                 </td>

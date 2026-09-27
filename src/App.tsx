@@ -2,13 +2,14 @@ import { useMemo, useRef, useState } from "react";
 import { InputPanel } from "./app/InputPanel";
 import { OutputPanel } from "./app/OutputPanel";
 import { Stage } from "./app/Stage";
-import { useAnalysis, useMachine } from "./app/hooks";
+import { useAnalysis, useDesign } from "./app/hooks";
 import { money, sig } from "./app/format";
 import { PRICES_READ } from "./catalog/types";
 import { bom as billOf } from "./machine/bom";
 import { compile, type Compiled } from "./machine/compile";
-import { formatMachine } from "./machine/document";
+import { formatMachine, sameDesign } from "./machine/document";
 import { presets } from "./machine/presets";
+import { score } from "./machine/requirements";
 
 // Parameters on the left, the machine in the middle, what it will do and cost
 // on the right. The 3D model and the BOM compile on every edit; the frame
@@ -22,7 +23,7 @@ function designId(text: string) {
 }
 
 export default function App() {
-  const { machine, set, replace } = useMachine();
+  const { machine, req, set, load, setReq } = useDesign();
   const lastGood = useRef<Compiled | null>(null);
   const compiled = useMemo(() => {
     try {
@@ -38,7 +39,12 @@ export default function App() {
   const [copied, setCopied] = useState(false);
 
   const text = formatMachine(machine);
-  const preset = presets.find((p) => formatMachine(p.machine) === text);
+  const preset = presets.find((p) => sameDesign(p.machine, machine));
+  const targets = useMemo(
+    () => (result?.ok ? score(req, { machine, perf: result.analysis.perf, modes: result.analysis.modes, bom }) : null),
+    [req, machine, result, bom],
+  );
+  const misses = targets?.filter((t) => !t.pass).length ?? 0;
   const partCount = compiled.asm.parts.filter((p) => p.shape !== "none").length;
 
   const share = async () => {
@@ -68,6 +74,9 @@ export default function App() {
           <span className="doc-kind">Gantry router</span>
           <span className="doc-name">{preset ? preset.name : "Custom design"}</span>
           <span className="doc-id">MFL-{designId(text)}</span>
+          {targets && (
+            <span className={`spec-chip ${misses ? "miss" : "pass"}`}>{misses ? `${misses} requirement${misses > 1 ? "s" : ""} missed` : "Meets spec"}</span>
+          )}
         </div>
         <dl className="readouts">
           <div>
@@ -97,9 +106,9 @@ export default function App() {
         </button>
       </header>
 
-      <InputPanel machine={machine} set={set} load={replace} />
+      <InputPanel machine={machine} req={req} set={set} load={load} setReq={setReq} />
       <Stage compiled={compiled} />
-      <OutputPanel machine={machine} result={result} pending={pending} bom={bom} />
+      <OutputPanel machine={machine} req={req} targets={targets} result={result} pending={pending} bom={bom} />
 
       <footer className="statusbar" aria-live="polite">
         <span className={`state ${solver}`}>

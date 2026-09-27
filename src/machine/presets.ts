@@ -37,7 +37,7 @@ export const presets: Preset[] = [
   {
     id: "steel",
     name: "Welded steel mill",
-    blurb: "900 × 1200, 4×2 steel tube, HGR25, SFU2005, 300 N cuts",
+    blurb: "900 × 1200, 4×2 steel tube, stacked beam, HGR25, SFU2005",
     machine: {
       ...defaultMachine,
       work: { x: 900, y: 1200, z: 200 },

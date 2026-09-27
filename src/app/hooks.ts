@@ -1,25 +1,46 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnalysisResult } from "../machine/analyze";
 import { formatMachine, parseMachine, setPath, type Machine } from "../machine/document";
+import { formatRequirements, loadFor, parseRequirements, type Requirements } from "../machine/requirements";
 import { validField } from "./fields";
 
-/** The machine document, kept in the URL hash so the address is the share link. */
-export function useMachine() {
-  const [machine, setMachine] = useState<Machine>(() => parseMachine(window.location.hash, validField));
+/**
+ * The machine document and its requirements, kept together in the URL hash
+ * so the address is the share link. The design load follows the material.
+ */
+export function useDesign() {
+  const read = () => ({ machine: parseMachine(window.location.hash, validField), req: parseRequirements(window.location.hash) });
+  const [state, setState] = useState(() => {
+    const s = read();
+    return { ...s, machine: { ...s.machine, cutN: loadFor(s.req) } };
+  });
 
   useEffect(() => {
-    const hash = `#${formatMachine(machine)}`;
+    const hash = `#${formatRequirements(state.req)}&${formatMachine(state.machine)}`;
     if (window.location.hash !== hash) window.history.replaceState(null, "", hash);
-  }, [machine]);
+  }, [state]);
 
   useEffect(() => {
-    const onHash = () => setMachine(parseMachine(window.location.hash, validField));
+    const onHash = () => {
+      const s = read();
+      setState({ ...s, machine: { ...s.machine, cutN: loadFor(s.req) } });
+    };
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
-  const set = useCallback((key: string, value: string | number) => setMachine((m) => setPath(m, key, value)), []);
-  return { machine, set, replace: setMachine };
+  const set = useCallback((key: string, value: string | number) => setState((s) => ({ ...s, machine: setPath(s.machine, key, value) })), []);
+  /** Replace the machine (a preset or a search candidate), keeping the requirements' load. */
+  const load = useCallback((m: Machine) => setState((s) => ({ ...s, machine: { ...m, cutN: loadFor(s.req) } })), []);
+  const setReq = useCallback(
+    (patch: Partial<Requirements>) =>
+      setState((s) => {
+        const req = { ...s.req, ...patch };
+        return { req, machine: { ...s.machine, cutN: loadFor(req) } };
+      }),
+    [],
+  );
+  return { machine: state.machine, req: state.req, set, load, setReq };
 }
 
 /**

@@ -30,7 +30,7 @@ export function analyze(machine: Machine): AnalysisResult {
     const solved = solve(c);
     const perf = performance(c, solved);
     const found = describeModes(c, modes(c, solved, 4));
-    const findings = checks(c, perf, found[0]?.hz ?? 0);
+    const findings = checks(c, perf);
     const { frame } = c.asm;
     const stats = {
       nodes: frame.nodes.length,
