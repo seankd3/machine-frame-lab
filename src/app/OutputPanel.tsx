@@ -8,6 +8,9 @@ import type { Machine } from "../machine/document";
 import { AXES, type ModeSummary, type Performance } from "../machine/simulate";
 import { PRICES_READ } from "../catalog/types";
 import { AXIS_LABEL, cutList, money, pct, sig } from "./format";
+import { Suggestions, TradeSpace } from "./Explore";
+import type { Exploration } from "./hooks";
+import type { Goals } from "../machine/explore";
 import { PaneHeader } from "./InputPanel";
 
 interface Props {
@@ -17,9 +20,12 @@ interface Props {
   result: AnalysisResult | null;
   pending: boolean;
   bom: Bom;
+  ex: Exploration;
+  goals: Goals;
+  apply: (key: string, value: string | number) => void;
 }
 
-type Tab = "analysis" | "bom";
+type Tab = "analysis" | "explore" | "bom";
 type Tone = "ok" | "warn" | "bad";
 
 /** Over target fails; within 20 % of it is a warning. */
@@ -35,12 +41,21 @@ export function OutputPanel(props: Props) {
           <button role="tab" aria-selected={tab === "analysis"} className={tab === "analysis" ? "on" : ""} onClick={() => setTab("analysis")}>
             Analysis
           </button>
+          <button role="tab" aria-selected={tab === "explore"} className={tab === "explore" ? "on" : ""} onClick={() => setTab("explore")}>
+            Explore
+          </button>
           <button role="tab" aria-selected={tab === "bom"} className={tab === "bom" ? "on" : ""} onClick={() => setTab("bom")}>
             BOM <span className="tab-n">{bom.lines.length}</span>
           </button>
         </div>
       </PaneHeader>
-      {tab === "analysis" ? <AnalysisTab {...props} /> : <BomTab bom={bom} />}
+      {tab === "analysis" ? (
+        <AnalysisTab {...props} />
+      ) : tab === "explore" ? (
+        <TradeSpace ex={props.ex} goals={props.goals} targets={props.targets} apply={props.apply} />
+      ) : (
+        <BomTab bom={bom} />
+      )}
     </aside>
   );
 }
@@ -59,7 +74,7 @@ function Block({ title, meta, children }: { title: string; meta?: ReactNode; chi
 
 // ------------------------------------------------------------ analysis
 
-function AnalysisTab({ machine, req, targets, result, pending }: Props) {
+function AnalysisTab({ machine, req, targets, result, pending, ex, goals, apply }: Props) {
   if (!result) return <p className="empty">Assembling stiffness matrix…</p>;
   if (!result.ok) return <p className="empty bad">Solve failed: {result.error}</p>;
   const { perf, modes, findings } = result.analysis;
@@ -69,6 +84,7 @@ function AnalysisTab({ machine, req, targets, result, pending }: Props) {
   return (
     <div className={`pane-body ${pending ? "stale" : ""}`}>
       {targets && <Scorecard targets={targets} />}
+      <Suggestions ex={ex} goals={goals} targets={targets} apply={apply} />
       {findings.length > 0 && <FindingLog findings={findings} />}
       <Stiffness perf={perf} cutN={machine.cutN} target={mat.deflectionUm} />
       <Budget perf={perf} initial={worst} />

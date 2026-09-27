@@ -2,14 +2,14 @@ import { useMemo, useRef, useState } from "react";
 import { InputPanel } from "./app/InputPanel";
 import { OutputPanel } from "./app/OutputPanel";
 import { Stage } from "./app/Stage";
-import { useAnalysis, useDesign } from "./app/hooks";
+import { useAnalysis, useDesign, useExplore } from "./app/hooks";
 import { money, sig } from "./app/format";
 import { PRICES_READ } from "./catalog/types";
 import { bom as billOf } from "./machine/bom";
 import { compile, type Compiled } from "./machine/compile";
 import { formatMachine, sameDesign } from "./machine/document";
 import { presets } from "./machine/presets";
-import { score } from "./machine/requirements";
+import { MATERIALS, PACES, score } from "./machine/requirements";
 
 // Parameters on the left, the machine in the middle, what it will do and cost
 // on the right. The 3D model and the BOM compile on every edit; the frame
@@ -36,6 +36,11 @@ export default function App() {
   const bom = useMemo(() => billOf(compiled), [compiled]);
   const massKg = useMemo(() => compiled.asm.parts.reduce((s, p) => s + p.massKg, 0), [compiled]);
   const { result, pending } = useAnalysis(machine);
+  const ex = useExplore(machine);
+  const goals = useMemo(
+    () => ({ deflectionUm: MATERIALS[req.material].deflectionUm, rapidMmMin: PACES[req.pace].rapidMmMin, accelMs2: PACES[req.pace].accelMs2, budget: req.budget, weld: req.weld }),
+    [req],
+  );
   const [copied, setCopied] = useState(false);
 
   const text = formatMachine(machine);
@@ -108,7 +113,7 @@ export default function App() {
 
       <InputPanel machine={machine} req={req} set={set} load={load} setReq={setReq} />
       <Stage compiled={compiled} />
-      <OutputPanel machine={machine} req={req} targets={targets} result={result} pending={pending} bom={bom} />
+      <OutputPanel machine={machine} req={req} targets={targets} result={result} pending={pending} bom={bom} ex={ex} goals={goals} apply={set} />
 
       <footer className="statusbar" aria-live="polite">
         <span className={`state ${solver}`}>

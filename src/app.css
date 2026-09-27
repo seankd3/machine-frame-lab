@@ -1329,6 +1329,180 @@ tr.miss .score-value {
   color: var(--bad);
 }
 
+/* suggestions and trade space */
+
+.explore-progress {
+  position: relative;
+  display: inline-block;
+  min-width: 64px;
+  padding-bottom: 3px;
+  text-align: right;
+}
+
+.explore-progress i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--accent);
+  transition: width 0.2s;
+}
+
+.sg-group {
+  display: grid;
+  gap: 4px;
+}
+
+.sg-title {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.suggestions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--hair);
+}
+
+.suggestion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 10px;
+}
+
+.suggestion + .suggestion {
+  border-top: 1px solid var(--hair);
+}
+
+.suggestion:hover {
+  background: var(--c3);
+}
+
+.sg-body {
+  display: grid;
+  min-width: 0;
+}
+
+.sg-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-effect {
+  font-size: 10.5px;
+  color: var(--text-3);
+}
+
+.sg-cost {
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.sg-cost.down {
+  color: var(--ok);
+}
+
+.sg-apply {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 9.5px;
+}
+
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart .grid {
+  stroke: var(--hair);
+  stroke-width: 1;
+}
+
+.chart .tick,
+.chart .axis-title {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  fill: var(--text-3);
+}
+
+.chart .goal {
+  stroke: var(--text-2);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.chart .goal-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  fill: var(--text-2);
+}
+
+.chart .dot {
+  fill: var(--text-2);
+  stroke: var(--c1);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: r 0.1s;
+}
+
+.chart .dot.hollow {
+  fill: var(--c1);
+  stroke: var(--text-2);
+  stroke-width: 1.5;
+}
+
+.chart .dot.hot {
+  fill: var(--text);
+}
+
+.chart .dot.current {
+  fill: var(--accent);
+  stroke: var(--c1);
+  pointer-events: none;
+}
+
+.chart .current-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  fill: var(--accent);
+}
+
+.tip {
+  position: absolute;
+  width: 190px;
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  background: var(--c0);
+  border: 1px solid var(--hair-2);
+  font-size: 11px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.tip .mono {
+  font-size: 10.5px;
+}
+
+table.variants tr.clickable {
+  cursor: pointer;
+}
+
+table.variants tr.clickable:hover td {
+  background: var(--c3);
+}
+
+.good-text {
+  color: var(--ok);
+}
+
 /* bill of materials */
 
 .bom-head {

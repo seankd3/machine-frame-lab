@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { AnalysisResult } from "../machine/analyze";
 import { formatMachine, parseMachine, setPath, type Machine } from "../machine/document";
 import { formatRequirements, loadFor, parseRequirements, type Requirements } from "../machine/requirements";
+import type { Quick, Variant } from "../machine/explore";
 import { validField } from "./fields";
 
 /**
@@ -102,4 +103,41 @@ export function useAnalysis(machine: Machine) {
   }, [machine, send]);
 
   return { result, pending };
+}
+
+export interface Exploration {
+  base: Quick | null;
+  variants: Variant[];
+  done: number;
+  total: number;
+  running: boolean;
+}
+
+/**
+ * Explores every one-change variant of the machine in a worker, streaming
+ * results. Edits restart it after a short pause, so dragging a slider does
+ * not start a hundred solves per frame.
+ */
+export function useExplore(machine: Machine, delayMs = 500): Exploration {
+  const [state, setState] = useState<Exploration>({ base: null, variants: [], done: 0, total: 0, running: true });
+  useEffect(() => {
+    setState({ base: null, variants: [], done: 0, total: 0, running: true });
+    let worker: Worker | null = null;
+    const timer = setTimeout(() => {
+      worker = new Worker(new URL("../machine/explore.worker.ts", import.meta.url), { type: "module" });
+      worker.onmessage = (event: MessageEvent<any>) => {
+        const msg = event.data;
+        if (msg.kind === "base") setState((s) => ({ ...s, base: msg.quick }));
+        else if (msg.kind === "batch") setState((s) => ({ ...s, variants: [...s.variants, ...msg.variants], done: msg.done, total: msg.total }));
+        else if (msg.kind === "done") setState((s) => ({ ...s, running: false }));
+      };
+      worker.onerror = () => setState((s) => ({ ...s, running: false }));
+      worker.postMessage({ id: 1, machine });
+    }, delayMs);
+    return () => {
+      clearTimeout(timer);
+      worker?.terminate();
+    };
+  }, [machine, delayMs]);
+  return state;
 }
