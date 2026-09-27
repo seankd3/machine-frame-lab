@@ -1,6 +1,6 @@
 import { profiles, profileUrl, type Profile } from "../data/profiles";
 import { tslotSection, tubeSection, type Section2D } from "../geometry/tslot";
-import { unpriced, type Item } from "./types";
+import { priced, unpriced, type Item, type Offer } from "./types";
 
 // Structural stock: 80/20 T-slot extrusion and steel rectangular tube, as the
 // section properties the frame model needs plus the price per metre.
@@ -35,6 +35,23 @@ const STEEL = { e: 200, g: 79, rho: 7850 };
  */
 const tslotJ = (p: Profile) => (p.cols * p.rows > 1 ? 0.45 : 0.13) * Math.min(p.ixMm4, p.iyMm4);
 
+const IN_PER_M = 1000 / 25.4;
+
+/** 80/20 direct list prices (8020.net), per metre with the per-cut fee. */
+const tslotPrices: Record<string, { perM: number; perCut: number }> = {
+  "1530": { perM: 1.81 * IN_PER_M, perCut: 3.79 },
+  "1545": { perM: 2.76 * IN_PER_M, perCut: 3.94 },
+  "3060": { perM: 5.72 * IN_PER_M, perCut: 4.47 },
+  "40-4080": { perM: 82.1, perCut: 3.79 },
+  "45-4590": { perM: 99.4, perCut: 3.79 },
+};
+
+const tslotOffer = (p: Profile): Offer => {
+  const price = tslotPrices[p.id];
+  if (!price) return unpriced("80/20", profileUrl(p), "m");
+  return priced("80/20", profileUrl(p), Math.round(price.perM * 100) / 100, "m", { perCut: price.perCut });
+};
+
 const tslot = (p: Profile): Stock => ({
   id: p.id,
   sku: `8020-${p.id}`,
@@ -52,11 +69,11 @@ const tslot = (p: Profile): Stock => ({
   slots: [p.cols, p.rows],
   section: () => tslotSection(p),
   profile: p,
-  offer: unpriced("80/20 via tnutz.com", profileUrl(p), "m"),
+  offer: tslotOffer(p),
 });
 
 /** Sharp-corner thin-wall properties; EN 10219 corner radii shift them ~1–2 %. */
-function tube(id: string, name: string, wIn: number, hIn: number, tIn: number): Stock {
+function tube(id: string, name: string, wIn: number, hIn: number, tIn: number, offer?: Offer): Stock {
   const [w, h, t] = [wIn * 25.4, hIn * 25.4, tIn * 25.4];
   const area = w * h - (w - 2 * t) * (h - 2 * t);
   return {
@@ -76,16 +93,20 @@ function tube(id: string, name: string, wIn: number, hIn: number, tIn: number): 
     gGPa: STEEL.g,
     slots: [0, 0],
     section: () => tubeSection(w, h, t),
-    offer: unpriced("Metals Depot", "https://www.metalsdepot.com/steel-products/steel-rectangle-tube", "m"),
+    offer: offer ?? unpriced("Metals Depot", METALS_DEPOT, "m"),
   };
 }
+
+const METALS_DEPOT = "https://www.metalsdepot.com/steel-products/steel-rectangle-tube";
+/** Metals Depot A500 tube, quoted per foot in 24 ft lengths. */
+const perFoot = (usd: number, note: string) => priced("Metals Depot", METALS_DEPOT, Math.round((usd / 0.3048) * 100) / 100, "m", { note });
 
 export const stock: Stock[] = [
   ...profiles.map(tslot),
   tube("tube-2x2x0.125", 'Steel tube 2" × 2" × 1/8"', 2, 2, 0.125),
-  tube("tube-3x2x0.125", 'Steel tube 3" × 2" × 1/8"', 2, 3, 0.125),
+  tube("tube-3x2x0.125", 'Steel tube 3" × 2" × 1/8"', 2, 3, 0.125, perFoot(9.12, "priced as 11 ga (0.120″) wall; 24 ft lengths")),
   tube("tube-3x3x0.1875", 'Steel tube 3" × 3" × 3/16"', 3, 3, 0.1875),
-  tube("tube-4x2x0.1875", 'Steel tube 4" × 2" × 3/16"', 2, 4, 0.1875),
+  tube("tube-4x2x0.1875", 'Steel tube 4" × 2" × 3/16"', 2, 4, 0.1875, perFoot(15.45, "24 ft lengths")),
 ];
 
 export const getStock = (id: string) => stock.find((s) => s.id === id);

@@ -13,6 +13,8 @@ export interface BomLine {
   unit: Offer["unit"];
   /** Cut lengths (mm) for stock sold by the metre, longest first. */
   cuts: number[];
+  /** Cutting fees included in the total. */
+  cutFee: number;
   offer: Offer;
   /** null when the item has no sourced price. */
   total: number | null;
@@ -32,7 +34,7 @@ export function bom(c: Compiled): Bom {
     const { item } = part;
     let line = lines.get(item.sku);
     if (!line) {
-      line = { sku: item.sku, name: item.name, group: part.group, qty: 0, unit: item.offer.unit, cuts: [], offer: item.offer, total: null };
+      line = { sku: item.sku, name: item.name, group: part.group, qty: 0, unit: item.offer.unit, cuts: [], cutFee: 0, offer: item.offer, total: null };
       lines.set(item.sku, line);
     }
     line.qty += part.qty;
@@ -45,7 +47,8 @@ export function bom(c: Compiled): Bom {
     // Stock is bought in whole centimetres; sheets and kilograms to a tenth.
     if (line.unit === "m") line.qty = Math.ceil(line.qty * 100) / 100;
     if (line.unit === "sheet" || line.unit === "kg") line.qty = Math.ceil(line.qty * 10) / 10;
-    line.total = line.offer.price === null ? null : line.offer.price * line.qty;
+    line.cutFee = (line.offer.perCut ?? 0) * line.cuts.length;
+    line.total = line.offer.price === null ? null : line.offer.price * line.qty + line.cutFee;
     if (line.total === null) unpriced++;
     else total += line.total;
   }

@@ -527,7 +527,11 @@ class Compiler {
       asm.add({ item: dr.belt, qty: (length * 2) / 1000, shape: `belt-${dr.id}-${Math.round(length)}`, build: () => sheetGeometry(dr.widthMm, length, 1.4, "rubber"), matrix: place(add(start, scale(up, 0)), up, dir), group, label: `${dr.id} belt`, rides, massKg: 0.02 * length * 0.001 });
       asm.add({ item: dr.kit, qty: 1, shape: "pulley-kit", build: () => couplerGeometry(10), matrix: place(add(start, scale(dir, nutAt)), side, dir), group, label: "Pulley set", rides: nutRides, massKg: 0.15 });
     }
-    asm.add({ item: { sku: `COUPLER`, name: "Flexible coupler", offer: { vendor: "Amazon", url: "https://www.amazon.com/s?k=flexible+shaft+coupler", price: null, unit: "each", asOf: "" } }, qty: 1, shape: "coupler", build: () => couplerGeometry(8), matrix: place(add(end, scale(dir, -6)), dir, up), group, label: "Flexible coupler", rides, massKg: 0.05 });
+    // A screw needs a coupler to the motor; a belt's pulley sits on the motor shaft.
+    if (dr.kind === "ballscrew") {
+      const screwEnd = dr.diameterMm <= 16 ? 10 : 12; // BK12 / BK15 journal
+      asm.add({ item: hardware.coupler(motor.shaftMm, screwEnd), qty: 1, shape: "coupler", build: () => couplerGeometry(8), matrix: place(add(end, scale(dir, -6)), dir, up), group, label: "Flexible coupler", rides, massKg: 0.05 });
+    }
     asm.add({ item: motor, qty: 1, shape: `motor-${motor.id}`, build: () => motorGeometry(motor.frameMm, motor.lengthMm, motor.shaftMm), matrix: place(add(end, scale(dir, 28)), neg(dir), up), group, label: motor.name, rides, massKg: motor.massKg });
     this.plate(motor.frameMm + 16, motor.frameMm + 16, 10, add(end, scale(dir, 14)), dir, up, group, "Motor mount plate", rides, [[0, 0, motor.frameMm * 0.68]]);
   }
@@ -542,5 +546,11 @@ class Compiler {
       asm.add({ item: extra, qty: extra.count, shape: "none", build: () => [], matrix: place(at, Z, Y), group: "Electronics", label: extra.name, massKg: 0 });
     }
     for (const extra of r.spindle.extras) asm.add({ item: extra, qty: 1, shape: "none", build: () => [], matrix: place(at, Z, Y), group: "Spindle", label: extra.name, massKg: 0 });
+    // Homing: one switch per motor-driven axis end, two on Y for squaring.
+    asm.add({ item: hardware.limitSwitch(), qty: 4, shape: "none", build: () => [], matrix: place(at, Z, Y), group: "Electronics", label: "Homing switches", massKg: 0.1 });
+    // Drag chain folds on itself: about half the travel plus a bend allowance per axis.
+    const { work } = this.m;
+    const chainM = (work.y / 2 + 300 + work.x / 2 + 200 + work.z / 2 + 150) / 1000;
+    asm.add({ item: hardware.dragChain(), qty: Math.ceil(chainM * 10) / 10, shape: "none", build: () => [], matrix: place(at, Z, Y), group: "Electronics", label: "Drag chain", massKg: chainM * 0.25 });
   }
 }

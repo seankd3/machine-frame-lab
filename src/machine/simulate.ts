@@ -33,6 +33,8 @@ const SUBSYSTEM: Record<string, string> = {
 
 export interface AxisMotion {
   movingKg: number;
+  /** Share of rated phase current the driver can supply (torque scales with it). */
+  currentShare: number;
   /** Peak linear force from the motors at low speed (N). */
   forceN: number;
   accelMs2: number;
@@ -145,7 +147,11 @@ function axisMotion(c: Compiled, axis: Axis): AxisMotion {
   const reflected = ((motor.rotorKgM2 + screwJ) * motors * (2 * Math.PI / perRev) ** 2);
   const gravity = axis === "z" ? movingKg * 9.81 : 0;
 
-  const force = (rpm: number) => (motors * torqueAt(motor, rpm) * 2 * Math.PI * efficiency) / perRev - gravity;
+  // A stepper's torque is close to proportional to phase current; drivers are
+  // rated in peak amps, motors in RMS.
+  const peak = r.controller.driverPeakA;
+  const currentShare = peak === null ? 1 : Math.min(1, peak / Math.SQRT2 / motor.ratedA);
+  const force = (rpm: number) => (motors * currentShare * torqueAt(motor, rpm) * 2 * Math.PI * efficiency) / perRev - gravity;
   const forceN = force(150);
   const accelMs2 = Math.max(0, forceN / (movingKg + reflected));
 
@@ -160,5 +166,5 @@ function axisMotion(c: Compiled, axis: Axis): AxisMotion {
     limits.push([(70000 / drive.diameterMm) * drive.leadMm, "ball-nut speed (DN 70,000)"]);
   }
   const [rapid, limitedBy] = limits.reduce((a, b) => (b[0] < a[0] ? b : a));
-  return { movingKg, forceN, accelMs2, rapidMmMin: rapid, limitedBy };
+  return { movingKg, currentShare, forceN, accelMs2, rapidMmMin: rapid, limitedBy };
 }
