@@ -29,7 +29,7 @@ export function analyze(machine: Machine): AnalysisResult {
     const c = compile(machine);
     const solved = solve(c);
     const perf = performance(c, solved);
-    const found = describeModes(c, modes(c, solved, 4));
+    const found = describeModes(c, modes(c, solved, 4), solved);
     const findings = checks(c, perf);
     const { frame } = c.asm;
     const stats = {

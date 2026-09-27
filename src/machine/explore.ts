@@ -2,6 +2,7 @@ import { fields } from "../app/fields";
 import { bom } from "./bom";
 import { compile } from "./compile";
 import { setPath, type Machine } from "./document";
+import { firstModeHz } from "../fea/frame";
 import { AXES, performance, solve } from "./simulate";
 
 // One-change exploration: every design that differs from the current one in
@@ -15,6 +16,8 @@ const PLATES = [6, 8, 10, 12, 15, 20, 25];
 /** What a design does, from the static solve and the BOM. */
 export interface Quick {
   deflectionUm: number;
+  /** First natural frequency by inverse iteration (Hz). */
+  f1: number;
   /** Slowest X/Y rapid and acceleration: the pace targets. */
   rapidMmMin: number;
   accelMs2: number;
@@ -24,6 +27,12 @@ export interface Quick {
   unpricedQty: Record<string, number>;
   massKg: number;
   welded: boolean;
+  /** Z can hold and accelerate its load. */
+  zOk: boolean;
+  /** Bracket joints on steel tube: nothing for the T-nuts to grip. */
+  unbuildable: boolean;
+  /** Subsystems holding the most compliance in the softest direction, largest first. */
+  soft: string[];
 }
 
 export interface Variant {
@@ -36,11 +45,13 @@ export interface Variant {
 
 export function quick(machine: Machine): Quick {
   const c = compile(machine);
-  const perf = performance(c, solve(c));
+  const solved = solve(c);
+  const perf = performance(c, solved);
   const b = bom(c);
   const planar = ["x", "y"] as const;
   return {
     deflectionUm: Math.max(...AXES.map((a) => perf.deflection[a])),
+    f1: firstModeHz(solved),
     rapidMmMin: Math.min(...planar.map((a) => perf.motion[a].rapidMmMin)),
     accelMs2: Math.min(...planar.map((a) => perf.motion[a].accelMs2)),
     cost: b.total,
@@ -48,6 +59,9 @@ export function quick(machine: Machine): Quick {
     unpricedQty: Object.fromEntries(b.lines.filter((l) => l.total === null).map((l) => [l.sku, l.qty])),
     massKg: perf.massKg,
     welded: machine.frame.joinery === "welded",
+    zOk: perf.motion.z.accelMs2 > 0.3,
+    unbuildable: machine.frame.joinery === "brackets" && c.r.frame.kind === "tube",
+    soft: perf.budget[AXES.reduce((a, b) => (perf.deflection[b] > perf.deflection[a] ? b : a))].slice(0, 3).map((b) => b.name),
   };
 }
 
@@ -118,6 +132,7 @@ export interface Suggestion extends Variant {
 
 export interface Goals {
   deflectionUm: number;
+  minModeHz: number;
   rapidMmMin: number;
   accelMs2: number;
   budget: number;
@@ -126,9 +141,9 @@ export interface Goals {
 }
 
 /** More of anything unpriced than the base has: the cost change is then a floor, not a figure. */
-const buysUnpriced = (base: Quick, v: Quick) => Object.entries(v.unpricedQty).some(([sku, q]) => q > (base.unpricedQty[sku] ?? 0) + 1e-9);
+export const buysUnpriced = (base: Quick, v: Quick) => Object.entries(v.unpricedQty).some(([sku, q]) => q > (base.unpricedQty[sku] ?? 0) + 1e-9);
 
-const meets = (q: Quick, g: Goals) => q.deflectionUm <= g.deflectionUm && q.rapidMmMin >= g.rapidMmMin && q.accelMs2 >= g.accelMs2;
+const meets = (q: Quick, g: Goals) => q.deflectionUm <= g.deflectionUm && q.f1 >= g.minModeHz && q.rapidMmMin >= g.rapidMmMin && q.accelMs2 >= g.accelMs2;
 
 /**
  * Ranked suggestions against the goals:

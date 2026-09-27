@@ -3,7 +3,7 @@ import type { AnalysisResult } from "../machine/analyze";
 import type { Group } from "../machine/assembly";
 import type { Bom, BomLine } from "../machine/bom";
 import type { Finding } from "../machine/checks";
-import { MATERIALS, type Requirements, type Target } from "../machine/requirements";
+import { MATERIALS, minModeHz, type Requirements, type Target } from "../machine/requirements";
 import type { Machine } from "../machine/document";
 import { AXES, type ModeSummary, type Performance } from "../machine/simulate";
 import { PRICES_READ } from "../catalog/types";
@@ -89,7 +89,7 @@ function AnalysisTab({ machine, req, targets, result, pending, ex, goals, apply 
       <Stiffness perf={perf} cutN={machine.cutN} target={mat.deflectionUm} />
       <Budget perf={perf} initial={worst} />
       <Motion perf={perf} />
-      <Modes modes={modes} minHz={mat.minModeHz} />
+      <Modes modes={modes} minHz={minModeHz(req)} />
     </div>
   );
 }

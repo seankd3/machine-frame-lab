@@ -11,7 +11,7 @@ describe("one-change exploration", () => {
     expect(variants.length).toBeGreaterThan(moves(defaultMachine).length * 0.9);
     console.log(`${variants.length} variants in ${Math.round(ms)} ms`);
 
-    const r = rank(base, variants, { deflectionUm: 50, rapidMmMin: 5000, accelMs2: 1, budget: 3000, weld: false });
+    const r = rank(base, variants, { deflectionUm: 50, minModeHz: 30, rapidMmMin: 5000, accelMs2: 1, budget: 3000, weld: false });
     expect(r.stiffer.length).toBeGreaterThan(0);
     for (const s of r.stiffer) expect(s.quick.deflectionUm).toBeLessThan(base.deflectionUm);
     for (const s of r.cheaper) {

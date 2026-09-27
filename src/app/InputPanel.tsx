@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { sameDesign, type Machine } from "../machine/document";
 import { presets } from "../machine/presets";
-import { BUDGET, MATERIALS, PACES, type Material, type Pace, type Requirements } from "../machine/requirements";
+import { BUDGET, MATERIALS, minModeHz, PACES, type Material, type Pace, type Requirements } from "../machine/requirements";
 import { fields, type ChoiceField, type NumberField, type Option } from "./fields";
 
 interface Props {
@@ -44,7 +44,7 @@ export function InputPanel({ machine, req, set, load, setReq }: Props) {
           <p className="spec-line">
             <span>F {mat.cutN} N</span>
             <span>δ ≤ {mat.deflectionUm} µm</span>
-            <span>f₁ ≥ {mat.minModeHz} Hz</span>
+            <span title="Ringing after an acceleration step stays inside the deflection target">f₁ ≥ {minModeHz(req)} Hz</span>
           </p>
         </div>
         {field("work.x")}

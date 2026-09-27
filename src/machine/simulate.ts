@@ -1,5 +1,5 @@
 import type { Drive, Motor } from "../catalog/motion";
-import { assemble, beamMatrices, solveModes, solveStatic, type FrameMode, type Solved } from "../fea/frame";
+import { assemble, solveModes, solveStatic, type FrameMode, type Solved } from "../fea/frame";
 import type { Axis } from "./assembly";
 import type { Compiled } from "./compile";
 
@@ -70,7 +70,7 @@ export function performance(c: Compiled, solved: Solved = solve(c)): Performance
     const compliance = u[tool * 6 + d];
     stiffness[axis] = 1 / compliance / 1e6;
     deflection[axis] = c.machine.cutN * compliance * 1e6;
-    budget[axis] = energyBudget(c, u);
+    budget[axis] = energyBudget(c, u, solved);
   });
   const motion = {} as Record<Axis, AxisMotion>;
   for (const axis of AXES) motion[axis] = axisMotion(c, axis);
@@ -90,12 +90,12 @@ export interface ModeSummary {
 }
 
 /** What each mode does: where its strain energy sits and how it moves the tool. */
-export function describeModes(c: Compiled, found: FrameMode[]): ModeSummary[] {
+export function describeModes(c: Compiled, found: FrameMode[], solved: Solved = solve(c)): ModeSummary[] {
   const tool = c.asm.marks.get("tool")!;
   return found.map(({ hz, shape }) => {
     const t = AXES.map((_, d) => shape[tool * 6 + d] ** 2);
     const sum = t.reduce((a, b) => a + b, 0) || 1;
-    return { hz, tool: { x: t[0] / sum, y: t[1] / sum, z: t[2] / sum }, budget: energyBudget(c, shape) };
+    return { hz, tool: { x: t[0] / sum, y: t[1] / sum, z: t[2] / sum }, budget: energyBudget(c, shape, solved) };
   });
 }
 
@@ -103,7 +103,7 @@ export function describeModes(c: Compiled, found: FrameMode[]): ModeSummary[] {
  * Strain energy per subsystem under a unit tool load. Energy ½uᵀKu equals
  * ½·compliance, so each subsystem's share is its share of the deflection.
  */
-function energyBudget(c: Compiled, u: Float64Array) {
+function energyBudget(c: Compiled, u: Float64Array, solved: Solved) {
   const { frame } = c.asm;
   const totals = new Map<string, number>();
   const bump = (tag: string, e: number) => {
@@ -111,9 +111,9 @@ function energyBudget(c: Compiled, u: Float64Array) {
     if (tag === "rigid") return;
     totals.set(name, (totals.get(name) ?? 0) + e);
   };
-  for (const b of frame.beams) {
+  for (const [i, b] of frame.beams.entries()) {
     if (b.tag === "rigid") continue;
-    const { kg } = beamMatrices(frame.nodes[b.a], frame.nodes[b.b], b.section, b.up);
+    const kg = solved.beamK[i];
     const ue = [...u.subarray(b.a * 6, b.a * 6 + 6), ...u.subarray(b.b * 6, b.b * 6 + 6)];
     let e = 0;
     for (let i = 0; i < 12; i++) for (let j = 0; j < 12; j++) e += ue[i] * kg[i][j] * ue[j];

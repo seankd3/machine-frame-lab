@@ -1,4 +1,5 @@
 import type { Bom } from "./bom";
+import type { Goals } from "./explore";
 import type { Machine } from "./document";
 import { AXES, type ModeSummary, type Performance } from "./simulate";
 
@@ -30,10 +31,10 @@ export const defaultRequirements: Requirements = { material: "aluminium", budget
  * about one chip thickness, the point where the cutter starts to rub and
  * chatter instead of cutting (looser for wood, where finish rules first).
  */
-export const MATERIALS: Record<Material, { label: string; cutN: number; deflectionUm: number; minModeHz: number; blurb: string }> = {
-  wood: { label: "Wood", cutN: 100, deflectionUm: 120, minModeHz: 20, blurb: "Sheet goods, hardwood, acrylic, HDPE" },
-  aluminium: { label: "Aluminium", cutN: 150, deflectionUm: 50, minModeHz: 30, blurb: "6061 plate and extrusion, brass, plus everything softer" },
-  steel: { label: "Steel", cutN: 250, deflectionUm: 25, minModeHz: 40, blurb: "Light passes in mild steel, plus everything softer" },
+export const MATERIALS: Record<Material, { label: string; cutN: number; deflectionUm: number; blurb: string }> = {
+  wood: { label: "Wood", cutN: 100, deflectionUm: 120, blurb: "Sheet goods, hardwood, acrylic, HDPE" },
+  aluminium: { label: "Aluminium", cutN: 150, deflectionUm: 50, blurb: "6061 plate and extrusion, brass, plus everything softer" },
+  steel: { label: "Steel", cutN: 250, deflectionUm: 25, blurb: "Light passes in mild steel, plus everything softer" },
 };
 
 /** Rapid and acceleration floors for the X and Y axes. */
@@ -44,6 +45,24 @@ export const PACES: Record<Pace, { label: string; rapidMmMin: number; accelMs2: 
 };
 
 export const loadFor = (r: Requirements) => MATERIALS[r.material].cutN;
+
+/**
+ * Lowest acceptable first mode (Hz). A step in acceleration a leaves a
+ * structure with natural frequency ω ringing with amplitude a/ω², so keeping
+ * that ringing inside the deflection target δ needs ω ≥ √(a/δ). Faster
+ * machines and finer materials both raise it.
+ */
+export const minModeHz = (r: Requirements) => Math.round((Math.sqrt(PACES[r.pace].accelMs2 / (MATERIALS[r.material].deflectionUm * 1e-6)) / (2 * Math.PI)) * 10) / 10;
+
+/** Every numeric target the requirements set, for the search and the suggestions. */
+export const goalsFor = (r: Requirements): Goals => ({
+  deflectionUm: MATERIALS[r.material].deflectionUm,
+  minModeHz: minModeHz(r),
+  rapidMmMin: PACES[r.pace].rapidMmMin,
+  accelMs2: PACES[r.pace].accelMs2,
+  budget: r.budget,
+  weld: r.weld,
+});
 
 // ------------------------------------------------------------ URL form
 
@@ -93,6 +112,7 @@ export interface ScoreInput {
 export function score(req: Requirements, { machine, perf, modes, bom }: ScoreInput): Target[] {
   const mat = MATERIALS[req.material];
   const pace = PACES[req.pace];
+  const fMin = minModeHz(req);
   const worst = AXES.reduce((a, b) => (perf.deflection[b] > perf.deflection[a] ? b : a));
   const w = perf.deflection[worst];
   const soft = perf.budget[worst][0];
@@ -116,9 +136,9 @@ export function score(req: Requirements, { machine, perf, modes, bom }: ScoreInp
       key: "mode",
       label: "First mode",
       value: `${f1.toFixed(1)} Hz`,
-      target: `≥ ${mat.minModeHz} Hz`,
-      pass: f1 >= mat.minModeHz,
-      margin: (f1 - mat.minModeHz) / mat.minModeHz,
+      target: `≥ ${fMin} Hz`,
+      pass: f1 >= fMin,
+      margin: (f1 - fMin) / fMin,
       hint: modes[0]?.budget[0] ? `${modes[0].budget[0].name} ${Math.round(modes[0].budget[0].share * 100)} % of the strain energy` : "",
     },
     {

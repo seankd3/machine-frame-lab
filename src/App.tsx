@@ -9,7 +9,7 @@ import { bom as billOf } from "./machine/bom";
 import { compile, type Compiled } from "./machine/compile";
 import { formatMachine, sameDesign } from "./machine/document";
 import { presets } from "./machine/presets";
-import { MATERIALS, PACES, score } from "./machine/requirements";
+import { goalsFor, score } from "./machine/requirements";
 
 // Parameters on the left, the machine in the middle, what it will do and cost
 // on the right. The 3D model and the BOM compile on every edit; the frame
@@ -37,10 +37,7 @@ export default function App() {
   const massKg = useMemo(() => compiled.asm.parts.reduce((s, p) => s + p.massKg, 0), [compiled]);
   const { result, pending } = useAnalysis(machine);
   const ex = useExplore(machine);
-  const goals = useMemo(
-    () => ({ deflectionUm: MATERIALS[req.material].deflectionUm, rapidMmMin: PACES[req.pace].rapidMmMin, accelMs2: PACES[req.pace].accelMs2, budget: req.budget, weld: req.weld }),
-    [req],
-  );
+  const goals = useMemo(() => goalsFor(req), [req]);
   const [copied, setCopied] = useState(false);
 
   const text = formatMachine(machine);

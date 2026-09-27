@@ -54,6 +54,8 @@ export interface Solved {
   k: Skyline;
   m: Skyline;
   factor: Skyline;
+  /** Global stiffness of each beam, kept for strain-energy sums. */
+  beamK: number[][][];
 }
 
 /** Numbers equations, assembles K and M, and factorises K. */
@@ -99,10 +101,12 @@ export function assemble(frame: Frame): Solved {
     }
   };
 
+  const beamK: number[][][] = [];
   for (const beam of frame.beams) {
     const { kg, mg } = beamMatrices(frame.nodes[beam.a], frame.nodes[beam.b], beam.section, beam.up);
     scatter(k, [beam.a, beam.b], kg);
     scatter(m, [beam.a, beam.b], mg);
+    beamK.push(kg);
   }
   for (const spring of frame.springs) {
     const ks: number[][] = Array.from({ length: 12 }, () => new Array(12).fill(0));
@@ -124,7 +128,7 @@ export function assemble(frame: Frame): Solved {
   const factor = new Skyline(first);
   k.cols.forEach((col, j) => factor.cols[j].set(col));
   factor.factor();
-  return { frame, eq, k, m, factor };
+  return { frame, eq, k, m, factor, beamK };
 }
 
 /** Displacement of every node DOF (length nodes × 6) under nodal loads. */
@@ -188,6 +192,34 @@ export function solveModes(solved: Solved, count: number, iterations = 40): Fram
     hz: Math.sqrt(Math.max(lambda, 0)) / (2 * Math.PI),
     shape: expand(solved, x[i]),
   }));
+}
+
+/**
+ * Lowest natural frequency alone, by inverse iteration with a Rayleigh
+ * quotient. It reuses the factorised K, so it costs a few back-substitutions
+ * rather than a subspace solve. When the two lowest modes are close, the
+ * quotient settles between them, so its error is bounded by their gap.
+ */
+export function firstModeHz(solved: Solved, iterations = 14): number {
+  const n = solved.factor.n;
+  const x = new Float64Array(n);
+  for (let i = 0; i < n; i++) x[i] = solved.m.get(i, i) * (1 + 0.1 * Math.sin(i));
+  let mx = solved.m.multiply(x);
+  let lambda = Infinity;
+  for (let it = 0; it < iterations; it++) {
+    // y = K⁻¹Mx, so Ky = Mx and the quotient yᵀKy / yᵀMy needs no K product.
+    const y = solved.factor.solve(mx);
+    const my = solved.m.multiply(y);
+    const lam = dot(y, mx) / dot(y, my);
+    let norm = 0;
+    for (let i = 0; i < n; i++) norm = Math.max(norm, Math.abs(y[i]));
+    for (let i = 0; i < n; i++) my[i] /= norm;
+    mx = my;
+    const done = Math.abs(lambda - lam) <= 1e-5 * lam;
+    lambda = lam;
+    if (done) break;
+  }
+  return Math.sqrt(Math.max(lambda, 0)) / (2 * Math.PI);
 }
 
 function expand(solved: Solved, reduced: Float64Array) {
