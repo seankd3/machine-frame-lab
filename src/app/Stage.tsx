@@ -1,16 +1,25 @@
 import { useEffect, useRef, useState } from "react";
 import type { Part } from "../machine/assembly";
 import type { Compiled } from "../machine/compile";
-import { Viewport, type Jog } from "../render/Viewport";
+import { Viewport, type Jog, type ViewName } from "../render/Viewport";
 import { money, sig } from "./format";
 
-// The 3D machine with its axis jog controls and the inspector for a clicked part.
+// The 3D machine with standard views, a digital readout that jogs the axes,
+// and a property sheet for the clicked part.
+
+const VIEWS: Array<{ name: ViewName; label: string; key: string }> = [
+  { name: "iso", label: "Iso", key: "0" },
+  { name: "front", label: "Front", key: "1" },
+  { name: "top", label: "Top", key: "7" },
+  { name: "side", label: "Side", key: "3" },
+];
 
 export function Stage({ compiled }: { compiled: Compiled }) {
   const { work } = compiled.machine;
   const [jog, setJog] = useState<Jog>({ x: 0, y: 0, z: 0 });
   const [picked, setPicked] = useState<Part | null>(null);
   const [running, setRunning] = useState(false);
+  const [view, setView] = useState<{ name: ViewName; n: number }>({ name: "iso", n: 0 });
 
   // Keep the jog inside travel and drop a pick whose part no longer exists.
   useEffect(() => {
@@ -21,6 +30,18 @@ export function Stage({ compiled }: { compiled: Compiled }) {
     }));
     setPicked(null);
   }, [compiled, work.x, work.y, work.z]);
+
+  // Numpad-style view keys, as in most CAD packages.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      const v = VIEWS.find((v) => v.key === e.key);
+      if (v) setView((cur) => ({ name: v.name, n: cur.n + 1 }));
+      if (e.key === "Escape") setPicked(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // Demo run: a slow Lissajous sweep over the whole work envelope.
   const start = useRef(0);
@@ -41,81 +62,97 @@ export function Stage({ compiled }: { compiled: Compiled }) {
     return () => cancelAnimationFrame(frame);
   }, [running, work.x, work.y, work.z]);
 
+  // Machine coordinates: X and Y from the front-left corner of travel, Z up from the table.
   const axes = [
-    { a: "x" as const, min: -work.x / 2, max: work.x / 2 },
-    { a: "y" as const, min: -work.y / 2, max: work.y / 2 },
-    { a: "z" as const, min: 0, max: work.z },
+    { a: "x" as const, min: -work.x / 2, max: work.x / 2, pos: jog.x + work.x / 2 },
+    { a: "y" as const, min: -work.y / 2, max: work.y / 2, pos: jog.y + work.y / 2 },
+    { a: "z" as const, min: 0, max: work.z, pos: jog.z },
   ];
 
   return (
     <main className="stage" aria-label="3D machine view">
-      <Viewport compiled={compiled} jog={jog} picked={picked} onPick={setPicked} />
+      <Viewport compiled={compiled} jog={jog} picked={picked} view={view} onPick={setPicked} />
+      <span className="crop tl" />
+      <span className="crop tr" />
+      <span className="crop bl" />
+      <span className="crop br" />
 
-      <div className="jog" role="group" aria-label="Jog axes">
-        {axes.map(({ a, min, max }) => (
-          <label key={a} className="jog-axis">
+      <div className="toolbar">
+        <span className="toolbar-label">Persp · Shaded</span>
+        <div className="segmented mini" role="group" aria-label="Standard views">
+          {VIEWS.map((v) => (
+            <button key={v.name} className={view.name === v.name ? "on" : ""} title={`${v.label} view (${v.key})`} onClick={() => setView((cur) => ({ name: v.name, n: cur.n + 1 }))}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {picked && (
+        <div className="inspector" role="dialog" aria-label="Selected part">
+          <div className="inspector-head">
+            <span className="pane-title">Selection</span>
+            <button className="icon-btn" aria-label="Clear selection" onClick={() => setPicked(null)}>
+              ✕
+            </button>
+          </div>
+          <div className="inspector-name">{picked.label}</div>
+          <dl className="props">
+            <dt>Item</dt>
+            <dd>{picked.item.name}</dd>
+            <dt>P/N</dt>
+            <dd className="mono">{picked.item.sku}</dd>
+            <dt>Assy</dt>
+            <dd>{picked.group}</dd>
+            {picked.cutMm && (
+              <>
+                <dt>Length</dt>
+                <dd className="mono">{picked.cutMm} mm</dd>
+              </>
+            )}
+            <dt>Mass</dt>
+            <dd className="mono">{picked.massKg >= 1 ? `${sig(picked.massKg)} kg` : `${Math.round(picked.massKg * 1000)} g`}</dd>
+            <dt>Price</dt>
+            <dd className="mono">
+              {picked.item.offer.price === null
+                ? "—"
+                : `${money(picked.item.offer.price, true)}${picked.item.offer.unit === "each" ? "" : `/${picked.item.offer.unit}`}`}
+            </dd>
+            <dt>Rides</dt>
+            <dd className="mono">{picked.rides.length ? picked.rides.map((r) => r.toUpperCase()).join(" · ") : "fixed"}</dd>
+          </dl>
+          <a className="inspector-link" href={picked.item.offer.url} target="_blank" rel="noreferrer">
+            {picked.item.offer.vendor} ↗
+          </a>
+        </div>
+      )}
+
+      <div className="dro" role="group" aria-label="Axis positions">
+        {axes.map(({ a, min, max, pos }) => (
+          <label key={a} className="dro-axis">
             <span className="axis-tag">{a.toUpperCase()}</span>
+            <span className="dro-value mono">{pos.toFixed(1).padStart(6, " ")}</span>
             <input
               type="range"
+              aria-label={`${a.toUpperCase()} position`}
               min={min}
               max={max}
               step={1}
-              value={jog[a]}
+              value={a === "z" ? jog.z : jog[a]}
               onChange={(e) => {
                 setRunning(false);
                 setJog((j) => ({ ...j, [a]: Number(e.target.value) }));
               }}
-              style={{ ["--fill" as string]: `${((jog[a] - min) / (max - min || 1)) * 100}%` }}
+              style={{ ["--fill" as string]: `${(((a === "z" ? jog.z : jog[a]) - min) / (max - min || 1)) * 100}%` }}
             />
-            <span className="num">{Math.round(a === "z" ? jog.z : jog[a] + (max - min) / 2)}</span>
           </label>
         ))}
-        <button className="ghost small" onClick={() => setRunning((r) => !r)} aria-pressed={running}>
-          {running ? "Stop" : "Run"}
+        <button className={`btn ${running ? "on" : ""}`} onClick={() => setRunning((r) => !r)} aria-pressed={running}>
+          {running ? "■ Stop" : "▶ Run"}
         </button>
       </div>
 
-      {picked ? (
-        <div className="inspector">
-          <div className="inspector-head">
-            <strong>{picked.label}</strong>
-            <button className="close" aria-label="Close" onClick={() => setPicked(null)}>
-              ×
-            </button>
-          </div>
-          <dl>
-            <dt>Item</dt>
-            <dd>{picked.item.name}</dd>
-            <dt>Assembly</dt>
-            <dd>{picked.group}</dd>
-            {picked.cutMm && (
-              <>
-                <dt>Cut length</dt>
-                <dd>{picked.cutMm} mm</dd>
-              </>
-            )}
-            <dt>Mass</dt>
-            <dd>{picked.massKg >= 1 ? `${sig(picked.massKg)} kg` : `${Math.round(picked.massKg * 1000)} g`}</dd>
-            <dt>Price</dt>
-            <dd>
-              {picked.item.offer.price === null
-                ? "no sourced price"
-                : `${money(picked.item.offer.price, true)}${picked.item.offer.unit === "each" ? " each" : ` per ${picked.item.offer.unit}`}`}
-            </dd>
-            {picked.rides.length > 0 && (
-              <>
-                <dt>Moves with</dt>
-                <dd>{picked.rides.map((r) => r.toUpperCase()).join(", ")}</dd>
-              </>
-            )}
-          </dl>
-          <a href={picked.item.offer.url} target="_blank" rel="noreferrer">
-            {picked.item.offer.vendor} ↗
-          </a>
-        </div>
-      ) : (
-        <p className="stage-hint">Drag to orbit · scroll to zoom · click a part to inspect it</p>
-      )}
+      {!picked && <p className="stage-hint">Drag orbit · Right-drag pan · Wheel zoom · Click select · 0 1 3 7 views</p>}
     </main>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { Machine } from "../machine/document";
+import { formatMachine, type Machine } from "../machine/document";
 import { presets } from "../machine/presets";
 import { fields, type ChoiceField, type NumberField, type Option } from "./fields";
 
@@ -15,99 +15,132 @@ export function InputPanel({ machine, set, load }: Props) {
   const field = (key: string) => {
     const f = fields[key];
     const value = get(machine, key);
-    if (f.kind === "number") return <NumberInput key={key} field={f} value={Number(value)} onChange={(v) => set(key, v)} />;
-    if (f.options.length <= 3) return <Segmented key={key} field={f} value={String(value)} onChange={(v) => set(key, v)} />;
-    return <Select key={key} field={f} value={String(value)} onChange={(v) => set(key, v)} />;
+    if (f.kind === "number") return <NumberRow key={key} id={key} field={f} value={Number(value)} onChange={(v) => set(key, v)} />;
+    if (f.options.length <= 3) return <SegmentRow key={key} field={f} value={String(value)} onChange={(v) => set(key, v)} />;
+    return <SelectRow key={key} id={key} field={f} value={String(value)} onChange={(v) => set(key, v)} />;
   };
 
-  const active = presets.find((p) => JSON.stringify(p.machine) === JSON.stringify(machine))?.id;
+  const current = formatMachine(machine);
 
   return (
-    <aside className="panel inputs" aria-label="Machine design">
-      <Section title="Start from">
-        <div className="presets">
-          {presets.map((p) => (
-            <button key={p.id} className={`preset ${active === p.id ? "on" : ""}`} onClick={() => load(p.machine)} aria-pressed={active === p.id}>
-              <strong>{p.name}</strong>
-              <span>{p.blurb}</span>
-            </button>
-          ))}
+    <aside className="pane inputs" aria-label="Design parameters">
+      <PaneHeader title="Parameters" />
+
+      <Section n="00" title="Baseline">
+        <div className="presets" role="radiogroup" aria-label="Start from a preset">
+          {presets.map((p, i) => {
+            const on = formatMachine(p.machine) === current;
+            return (
+              <button key={p.id} role="radio" aria-checked={on} className={`preset ${on ? "on" : ""}`} onClick={() => load(p.machine)}>
+                <span className="preset-idx">P{i + 1}</span>
+                <span className="preset-body">
+                  <span className="preset-name">{p.name}</span>
+                  <span className="preset-blurb">{p.blurb}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Section>
 
-      <Section title="Work area">
+      <Section n="01" title="Work envelope">
         {field("work.x")}
         {field("work.y")}
         {field("work.z")}
       </Section>
 
-      <Section title="Base frame">
+      <Section n="02" title="Base frame">
         {field("frame.stock")}
         {field("frame.joinery")}
       </Section>
 
-      <Section title="Gantry">
+      <Section n="03" title="Gantry">
         {field("gantry.beam")}
         {field("gantry.beams")}
         {field("gantry.plateMm")}
         {field("gantry.clearanceMm")}
       </Section>
 
-      <Section title="Motion">
-        <div className="axis-grid">
-          <span />
-          <span className="col-head">Guide</span>
-          <span className="col-head">Drive</span>
-          <span className="col-head">Motor</span>
-          {(["x", "y", "z"] as const).map((a) => (
-            <AxisRow key={a} axis={a} machine={machine} set={set} />
-          ))}
-        </div>
-        <p className="aside">Y runs a drive and motor on each side of the base.</p>
+      <Section n="04" title="Motion">
+        <table className="axis-table">
+          <thead>
+            <tr>
+              <th />
+              <th>Guide</th>
+              <th>Drive</th>
+              <th>Motor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(["x", "y", "z"] as const).map((a) => (
+              <AxisRow key={a} axis={a} machine={machine} set={set} />
+            ))}
+          </tbody>
+        </table>
+        <p className="note">Y runs a drive and motor on each side of the base.</p>
       </Section>
 
-      <Section title="Spindle & control">
+      <Section n="05" title="Spindle & control">
         {field("spindle")}
         {field("controller")}
       </Section>
 
-      <Section title="Load case">{field("cutN")}</Section>
+      <Section n="06" title="Load case">{field("cutN")}</Section>
     </aside>
   );
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+export function PaneHeader({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <div className="pane-header">
+      <span className="pane-title">{title}</span>
+      {children}
+    </div>
+  );
+}
+
+function Section({ n, title, children }: { n: string; title: string; children: ReactNode }) {
   return (
     <section className="section">
-      <h2>{title}</h2>
-      {children}
+      <h2>
+        <span className="section-n">{n}</span>
+        {title}
+      </h2>
+      <div className="section-body">{children}</div>
     </section>
   );
 }
 
 function AxisRow({ axis, machine, set }: { axis: "x" | "y" | "z"; machine: Machine; set: Props["set"] }) {
   return (
-    <>
-      <span className="axis-tag">{axis.toUpperCase()}</span>
+    <tr>
+      <th scope="row" className="axis-tag">
+        {axis.toUpperCase()}
+      </th>
       {(["guide", "drive", "motor"] as const).map((k) => {
         const key = `${axis}.${k}`;
         const f = fields[key] as ChoiceField;
+        const current = f.options.find((o) => o.id === machine[axis][k]);
         return (
-          <select key={key} aria-label={`${axis.toUpperCase()} ${f.label}`} value={machine[axis][k]} onChange={(e) => set(key, e.target.value)}>
-            {f.options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.id}
-                {o.price ? ` · ${o.price}` : ""}
-              </option>
-            ))}
-          </select>
+          <td key={key}>
+            <select aria-label={`${axis.toUpperCase()} ${f.label}`} value={machine[axis][k]} onChange={(e) => set(key, e.target.value)} title={current?.price ?? "no sourced price"}>
+              {f.options.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.id}
+                  {o.price ? `  ${o.price}` : ""}
+                </option>
+              ))}
+            </select>
+          </td>
         );
       })}
-    </>
+    </tr>
   );
 }
 
-function NumberInput({ field: f, value, onChange }: { field: NumberField; value: number; onChange: (v: number) => void }) {
+const inputId = (key: string) => `in-${key.replace(/\W+/g, "-")}`;
+
+function NumberRow({ id, field: f, value, onChange }: { id: string; field: NumberField; value: number; onChange: (v: number) => void }) {
   // The text box keeps its own draft so a half-typed number is not clamped mid-edit.
   const [draft, setDraft] = useState(String(value));
   useEffect(() => setDraft(String(value)), [value]);
@@ -118,24 +151,24 @@ function NumberInput({ field: f, value, onChange }: { field: NumberField; value:
     setDraft(String(clamped));
     if (clamped !== value) onChange(clamped);
   };
-  const id = `f-${f.label.replace(/\W+/g, "-").toLowerCase()}`;
   return (
-    <div className="field">
-      <div className="field-head">
-        <label htmlFor={id}>{f.label}</label>
-        <span className="num-box">
-          <input
-            id={id}
-            inputMode="numeric"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => e.key === "Enter" && commit()}
-          />
-          <span className="unit">{f.unit}</span>
-        </span>
-      </div>
+    <div className="prop">
+      <label htmlFor={inputId(id)} title={f.hint}>
+        {f.label}
+      </label>
+      <span className="num-field">
+        <input
+          id={inputId(id)}
+          inputMode="numeric"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === "Enter" && commit()}
+        />
+        <span className="unit">{f.unit}</span>
+      </span>
       <input
+        className="prop-slider"
         type="range"
         aria-label={f.label}
         min={f.min}
@@ -145,15 +178,14 @@ function NumberInput({ field: f, value, onChange }: { field: NumberField; value:
         onChange={(e) => onChange(Number(e.target.value))}
         style={{ ["--fill" as string]: `${((value - f.min) / (f.max - f.min)) * 100}%` }}
       />
-      {f.hint && <p className="hint">{f.hint}</p>}
     </div>
   );
 }
 
-function Segmented({ field: f, value, onChange }: { field: ChoiceField; value: string; onChange: (v: string) => void }) {
+function SegmentRow({ field: f, value, onChange }: { field: ChoiceField; value: string; onChange: (v: string) => void }) {
   return (
-    <div className="field">
-      <span className="label">{f.label}</span>
+    <div className="prop">
+      <span className="prop-label">{f.label}</span>
       <div className="segmented" role="radiogroup" aria-label={f.label}>
         {f.options.map((o) => (
           <button key={o.id} role="radio" aria-checked={value === o.id} className={value === o.id ? "on" : ""} onClick={() => onChange(o.id)}>
@@ -165,24 +197,21 @@ function Segmented({ field: f, value, onChange }: { field: ChoiceField; value: s
   );
 }
 
-function Select({ field: f, value, onChange }: { field: ChoiceField; value: string; onChange: (v: string) => void }) {
+function SelectRow({ id, field: f, value, onChange }: { id: string; field: ChoiceField; value: string; onChange: (v: string) => void }) {
   const groups = new Map<string, Option[]>();
   for (const o of f.options) groups.set(o.group ?? "", [...(groups.get(o.group ?? "") ?? []), o]);
   const current = f.options.find((o) => o.id === value);
-  const id = `f-${f.label.replace(/\W+/g, "-").toLowerCase()}`;
   const option = (o: Option) => (
     <option key={o.id} value={o.id}>
       {o.label}
-      {o.price ? ` · ${o.price}` : " · unpriced"}
+      {o.price ? ` — ${o.price}` : " — unpriced"}
     </option>
   );
   return (
-    <div className="field">
-      <div className="field-head">
-        <label htmlFor={id}>{f.label}</label>
-        <span className="hint">{current?.price ?? "no sourced price"}</span>
-      </div>
-      <select id={id} value={value} onChange={(e) => onChange(e.target.value)}>
+    <div className="prop stacked">
+      <label htmlFor={inputId(id)}>{f.label}</label>
+      <span className={`price-tag ${current?.price ? "" : "none"}`}>{current?.price ?? "unpriced"}</span>
+      <select id={inputId(id)} value={value} onChange={(e) => onChange(e.target.value)}>
         {[...groups.entries()].map(([g, opts]) => (g ? <optgroup key={g} label={g}>{opts.map(option)}</optgroup> : opts.map(option)))}
       </select>
     </div>

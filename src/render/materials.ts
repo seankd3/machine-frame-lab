@@ -46,11 +46,11 @@ const mdfTexture = () =>
   canvasTexture(
     512,
     (ctx, s) => {
-      ctx.fillStyle = "#a88257";
+      ctx.fillStyle = "#8a6b4c";
       ctx.fillRect(0, 0, s, s);
       for (let i = 0; i < 14000; i++) {
         const l = 0.55 + rand() * 0.25;
-        ctx.fillStyle = `rgba(${Math.round(120 * l + 60)},${Math.round(90 * l + 40)},${Math.round(60 * l + 20)},0.18)`;
+        ctx.fillStyle = `rgba(${Math.round(110 * l + 45)},${Math.round(85 * l + 32)},${Math.round(60 * l + 18)},0.2)`;
         ctx.fillRect(rand() * s, rand() * s, 1 + rand() * 2, 1 + rand() * 2);
       }
     },

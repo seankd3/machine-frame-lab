@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { AnalysisResult } from "../machine/analyze";
 import type { Group } from "../machine/assembly";
 import type { Bom, BomLine } from "../machine/bom";
 import { DEFLECTION, MIN_MODE_HZ, type Finding } from "../machine/checks";
 import type { Machine } from "../machine/document";
 import { AXES, type ModeSummary, type Performance } from "../machine/simulate";
+import { PRICES_READ } from "../catalog/types";
 import { AXIS_LABEL, cutList, money, pct, sig } from "./format";
+import { PaneHeader } from "./InputPanel";
 
 interface Props {
   machine: Machine;
@@ -14,50 +16,62 @@ interface Props {
   bom: Bom;
 }
 
-type Tab = "performance" | "parts";
+type Tab = "analysis" | "bom";
+type Tone = "ok" | "warn" | "bad";
+
+const deflectionTone = (um: number): Tone => (um > DEFLECTION.soft ? "bad" : um > DEFLECTION.good ? "warn" : "ok");
 
 export function OutputPanel({ machine, result, pending, bom }: Props) {
-  const [tab, setTab] = useState<Tab>("performance");
+  const [tab, setTab] = useState<Tab>("analysis");
   return (
-    <aside className="panel outputs" aria-label="Results">
-      <div className="tabs" role="tablist">
-        <button role="tab" aria-selected={tab === "performance"} className={tab === "performance" ? "on" : ""} onClick={() => setTab("performance")}>
-          Performance
-        </button>
-        <button role="tab" aria-selected={tab === "parts"} className={tab === "parts" ? "on" : ""} onClick={() => setTab("parts")}>
-          Parts &amp; cost <span className="tab-count">{money(bom.total)}</span>
-        </button>
-        <span className={`solving ${pending ? "on" : ""}`} aria-live="polite">
-          {pending ? "Solving…" : ""}
-        </span>
-      </div>
-      {tab === "performance" ? <PerformanceTab machine={machine} result={result} pending={pending} bom={bom} /> : <PartsTab bom={bom} />}
+    <aside className="pane outputs" aria-label="Results">
+      <PaneHeader title="Results">
+        <div className="tabs" role="tablist">
+          <button role="tab" aria-selected={tab === "analysis"} className={tab === "analysis" ? "on" : ""} onClick={() => setTab("analysis")}>
+            Analysis
+          </button>
+          <button role="tab" aria-selected={tab === "bom"} className={tab === "bom" ? "on" : ""} onClick={() => setTab("bom")}>
+            BOM <span className="tab-n">{bom.lines.length}</span>
+          </button>
+        </div>
+      </PaneHeader>
+      {tab === "analysis" ? <AnalysisTab machine={machine} result={result} pending={pending} bom={bom} /> : <BomTab bom={bom} />}
     </aside>
   );
 }
 
-// ------------------------------------------------------------ performance
+function Block({ title, meta, children }: { title: string; meta?: ReactNode; children: ReactNode }) {
+  return (
+    <section className="block">
+      <header className="block-head">
+        <h3>{title}</h3>
+        {meta}
+      </header>
+      {children}
+    </section>
+  );
+}
 
-function PerformanceTab({ machine, result, pending, bom }: Props) {
-  if (!result) return <p className="empty">Solving the frame…</p>;
-  if (!result.ok) return <p className="empty bad">This design does not solve: {result.error}</p>;
+// ------------------------------------------------------------ analysis
+
+function AnalysisTab({ machine, result, pending, bom }: Props) {
+  if (!result) return <p className="empty">Assembling stiffness matrix…</p>;
+  if (!result.ok) return <p className="empty bad">Solve failed: {result.error}</p>;
   const { perf, modes, findings } = result.analysis;
   const worst = AXES.reduce((a, b) => (perf.deflection[b] > perf.deflection[a] ? b : a));
   const w = perf.deflection[worst];
-  const tone = w > DEFLECTION.soft ? "bad" : w > DEFLECTION.good ? "warn" : "ok";
   const first = modes[0]?.hz ?? 0;
 
   return (
-    <div className={`tab-body ${pending ? "stale" : ""}`}>
-      <div className="kpis">
-        <Kpi label="Parts cost" value={money(bom.total)} sub={bom.unpriced ? `+ ${bom.unpriced} unpriced lines` : "all lines priced"} />
-        <Kpi label={`Deflection at ${machine.cutN} N`} value={`${sig(w)} µm`} sub={`worst in ${AXIS_LABEL[worst]}`} tone={tone} />
-        <Kpi label="First mode" value={`${first.toFixed(1)} Hz`} sub={first < MIN_MODE_HZ ? `below the ${MIN_MODE_HZ} Hz guide` : `above the ${MIN_MODE_HZ} Hz guide`} tone={first < MIN_MODE_HZ ? "warn" : "ok"} />
-        <Kpi label="Machine mass" value={`${sig(perf.massKg)} kg`} sub={`gantry moves ${sig(perf.motion.y.movingKg)} kg`} />
+    <div className={`pane-body ${pending ? "stale" : ""}`}>
+      <div className="readout-grid">
+        <Readout label={`Deflection δmax @ ${machine.cutN} N`} value={sig(w)} unit="µm" sub={`${AXIS_LABEL[worst]} axis`} tone={deflectionTone(w)} />
+        <Readout label="Stiffness kmin" value={sig(Math.min(...AXES.map((a) => perf.stiffness[a])))} unit="N/µm" sub="at the tool" tone={deflectionTone(w)} />
+        <Readout label="First mode f₁" value={first.toFixed(1)} unit="Hz" sub={`guide ≥ ${MIN_MODE_HZ} Hz`} tone={first < MIN_MODE_HZ ? "warn" : "ok"} />
+        <Readout label="Parts, priced" value={money(bom.total)} unit="" sub={bom.unpriced ? `${bom.unpriced} lines unpriced` : "fully priced"} />
       </div>
 
-      {findings.length > 0 && <Findings findings={findings} />}
-
+      {findings.length > 0 && <FindingLog findings={findings} />}
       <Stiffness perf={perf} cutN={machine.cutN} />
       <Budget perf={perf} initial={worst} />
       <Motion perf={perf} />
@@ -66,64 +80,96 @@ function PerformanceTab({ machine, result, pending, bom }: Props) {
   );
 }
 
-function Kpi({ label, value, sub, tone }: { label: string; value: string; sub: string; tone?: "ok" | "warn" | "bad" }) {
+function Readout({ label, value, unit, sub, tone }: { label: string; value: string; unit: string; sub: string; tone?: Tone }) {
   return (
-    <div className={`kpi ${tone ?? ""}`}>
-      <span className="kpi-label">{label}</span>
-      <span className="kpi-value">{value}</span>
-      <span className="kpi-sub">{sub}</span>
+    <div className={`readout ${tone ?? ""}`}>
+      <span className="readout-label">{label}</span>
+      <span className="readout-value">
+        {value}
+        {unit && <small>{unit}</small>}
+      </span>
+      <span className="readout-sub">{sub}</span>
     </div>
   );
 }
 
-function Findings({ findings }: { findings: Finding[] }) {
+const CODE = { bad: "FAIL", warn: "WARN", info: "NOTE" } as const;
+
+function FindingLog({ findings }: { findings: Finding[] }) {
   const order = { bad: 0, warn: 1, info: 2 };
+  const counts = { bad: 0, warn: 0, info: 0 };
+  for (const f of findings) counts[f.severity]++;
   return (
-    <section className="block">
-      <h3>Findings</h3>
-      <ul className="findings">
+    <Block
+      title="Checks"
+      meta={
+        <span className="counts">
+          {counts.bad > 0 && <b className="bad">{counts.bad} fail</b>}
+          {counts.warn > 0 && <b className="warn">{counts.warn} warn</b>}
+          {counts.info > 0 && <b>{counts.info} note</b>}
+        </span>
+      }
+    >
+      <ul className="log">
         {[...findings]
           .sort((a, b) => order[a.severity] - order[b.severity])
           .map((f, i) => (
             <li key={i} className={f.severity}>
-              <strong>{f.title}</strong>
-              <span>{f.detail}</span>
+              <span className="code">{CODE[f.severity]}</span>
+              <span className="log-text">
+                <strong>{f.title}</strong>
+                <span>{f.detail}</span>
+              </span>
             </li>
           ))}
       </ul>
-    </section>
+    </Block>
   );
 }
 
 function Stiffness({ perf, cutN }: { perf: Performance; cutN: number }) {
-  // Bars on a log scale from 5 µm to 1 mm, with the chip-load and wood-only marks.
-  const scale = (um: number) => Math.min(100, Math.max(0, (Math.log10(Math.max(um, 5)) - Math.log10(5)) / (Math.log10(1000) - Math.log10(5)) * 100));
+  // Log scale from 5 µm to 1 mm, ticked at the chip-load and wood-only limits.
+  const lo = Math.log10(5);
+  const hi = Math.log10(1000);
+  const x = (um: number) => Math.min(100, Math.max(0, ((Math.log10(Math.max(um, 5)) - lo) / (hi - lo)) * 100));
   return (
-    <section className="block">
-      <h3>Stiffness at the tool</h3>
-      <p className="aside">
-        Tool-tip deflection under {cutN} N in each direction, gantry and carriage centred, Z at the bottom of travel. Ticks mark {DEFLECTION.good} µm (about a
-        chip load in aluminium) and {DEFLECTION.soft} µm (light wood passes only); the scale is logarithmic, 5 µm to 1 mm.
+    <Block title="Tool-point compliance" meta={<span className="meta">F = {cutN} N · log scale</span>}>
+      <table className="data">
+        <thead>
+          <tr>
+            <th />
+            <th className="bar-col">5 µm ··· 1 mm</th>
+            <th className="r">δ µm</th>
+            <th className="r">k N/µm</th>
+          </tr>
+        </thead>
+        <tbody>
+          {AXES.map((a) => {
+            const um = perf.deflection[a];
+            return (
+              <tr key={a}>
+                <th scope="row" className="axis-tag">
+                  {AXIS_LABEL[a]}
+                </th>
+                <td className="bar-col">
+                  <span className="gauge">
+                    <span className={`gauge-fill ${deflectionTone(um)}`} style={{ width: `${x(um)}%` }} />
+                    <i style={{ left: `${x(DEFLECTION.good)}%` }} />
+                    <i style={{ left: `${x(DEFLECTION.soft)}%` }} />
+                  </span>
+                </td>
+                <td className="r mono">{sig(um)}</td>
+                <td className="r mono dim">{sig(perf.stiffness[a])}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="note">
+        Ticks: {DEFLECTION.good} µm ≈ one chip load in aluminium; {DEFLECTION.soft} µm = light wood passes only. Gantry and carriage centred, Z at the bottom of
+        travel.
       </p>
-      <div className="stiff">
-        {AXES.map((a) => {
-          const um = perf.deflection[a];
-          const tone = um > DEFLECTION.soft ? "bad" : um > DEFLECTION.good ? "warn" : "ok";
-          return (
-            <div key={a} className="stiff-row">
-              <span className="axis-tag">{AXIS_LABEL[a]}</span>
-              <div className="track">
-                <div className={`bar ${tone}`} style={{ width: `${scale(um)}%` }} />
-                <i className="mark" style={{ left: `${scale(DEFLECTION.good)}%` }} title={`${DEFLECTION.good} µm: about one chip load in aluminium`} />
-                <i className="mark" style={{ left: `${scale(DEFLECTION.soft)}%` }} title={`${DEFLECTION.soft} µm: light wood passes only`} />
-              </div>
-              <span className="num">{sig(um)} µm</span>
-              <span className="num faint">{sig(perf.stiffness[a])} N/µm</span>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+    </Block>
   );
 }
 
@@ -131,45 +177,49 @@ function Budget({ perf, initial }: { perf: Performance; initial: keyof Performan
   const [axis, setAxis] = useState(initial);
   const rows = perf.budget[axis];
   return (
-    <section className="block">
-      <div className="block-head">
-        <h3>Where it bends</h3>
-        <div className="segmented small" role="radiogroup" aria-label="Load direction">
+    <Block
+      title="Compliance budget"
+      meta={
+        <div className="segmented mini" role="radiogroup" aria-label="Load direction">
           {AXES.map((a) => (
             <button key={a} role="radio" aria-checked={axis === a} className={axis === a ? "on" : ""} onClick={() => setAxis(a)}>
               {AXIS_LABEL[a]}
             </button>
           ))}
         </div>
-      </div>
-      <p className="aside">Share of the tool&rsquo;s {AXIS_LABEL[axis]} deflection stored in each subsystem. Stiffen the top line first.</p>
-      <ul className="budget">
-        {rows.map((r) => (
-          <li key={r.name}>
-            <span className="name">{r.name}</span>
-            <span className="track">
-              <span className="bar" style={{ width: `${r.share * 100}%` }} />
-            </span>
-            <span className="num">{pct(r.share)}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+      }
+    >
+      <table className="data">
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.name} className={i === 0 ? "lead" : ""}>
+              <td className="name">{r.name}</td>
+              <td className="bar-col">
+                <span className="gauge">
+                  <span className="gauge-fill accent" style={{ width: `${r.share * 100}%` }} />
+                </span>
+              </td>
+              <td className="r mono">{pct(r.share)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="note">Share of the {AXIS_LABEL[axis]} deflection stored in each subsystem. Stiffen the top row first.</p>
+    </Block>
   );
 }
 
 function Motion({ perf }: { perf: Performance }) {
   return (
-    <section className="block">
-      <h3>Motion</h3>
-      <table className="grid">
+    <Block title="Axis dynamics">
+      <table className="data">
         <thead>
           <tr>
             <th />
-            <th>Moving</th>
-            <th>Accel</th>
-            <th>Rapid</th>
-            <th>Limited by</th>
+            <th className="r">m kg</th>
+            <th className="r">a m/s²</th>
+            <th className="r">v m/min</th>
+            <th>Limit</th>
           </tr>
         </thead>
         <tbody>
@@ -177,105 +227,111 @@ function Motion({ perf }: { perf: Performance }) {
             const m = perf.motion[a];
             return (
               <tr key={a}>
-                <td className="axis-tag">{AXIS_LABEL[a]}</td>
-                <td className="num">{sig(m.movingKg)} kg</td>
-                <td className="num">{sig(m.accelMs2)} m/s²</td>
-                <td className="num">{sig(m.rapidMmMin / 1000)} m/min</td>
-                <td className="faint">
+                <th scope="row" className="axis-tag">
+                  {AXIS_LABEL[a]}
+                </th>
+                <td className="r mono">{sig(m.movingKg)}</td>
+                <td className="r mono">{sig(m.accelMs2)}</td>
+                <td className="r mono">{sig(m.rapidMmMin / 1000)}</td>
+                <td className="dim small">
                   {m.limitedBy}
-                  {m.currentShare < 0.9 ? `, ${pct(m.currentShare)} current` : ""}
+                  {m.currentShare < 0.9 ? ` · ${pct(m.currentShare)} I` : ""}
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-    </section>
+    </Block>
   );
 }
 
 function Modes({ modes }: { modes: ModeSummary[] }) {
   return (
-    <section className="block">
-      <h3>Vibration modes</h3>
-      <ul className="modes">
-        {modes.map((m, i) => {
-          const dir = AXES.reduce((a, b) => (m.tool[b] > m.tool[a] ? b : a));
-          const top = m.budget[0];
-          return (
-            <li key={i}>
-              <span className="num hz">{sig(m.hz)} Hz</span>
-              <span>
-                {top ? top.name : "Whole frame"}
-                <span className="faint"> · {top ? pct(top.share) : ""} of strain energy</span>
-              </span>
-              <span className="faint">tool {AXIS_LABEL[dir]} {pct(m.tool[dir])}</span>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="aside">Stepper and spindle harmonics near a mode excite it; keep frequently used feeds away from these.</p>
-    </section>
+    <Block title="Modal">
+      <table className="data">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th className="r">f Hz</th>
+            <th>Dominant subsystem</th>
+            <th className="r">Tool</th>
+          </tr>
+        </thead>
+        <tbody>
+          {modes.map((m, i) => {
+            const dir = AXES.reduce((a, b) => (m.tool[b] > m.tool[a] ? b : a));
+            const top = m.budget[0];
+            return (
+              <tr key={i}>
+                <td className="mono dim">{i + 1}</td>
+                <td className={`r mono ${m.hz < MIN_MODE_HZ ? "warn-text" : ""}`}>{m.hz.toFixed(1)}</td>
+                <td className="name">
+                  {top ? top.name : "Whole frame"} <span className="dim mono small">{top ? pct(top.share) : ""}</span>
+                </td>
+                <td className="r mono dim">
+                  {AXIS_LABEL[dir]} {pct(m.tool[dir])}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <p className="note">Keep stepper and tooth-pass frequencies away from these.</p>
+    </Block>
   );
 }
 
-// ------------------------------------------------------------ parts and cost
+// ------------------------------------------------------------ bill of materials
 
 const GROUPS: Group[] = ["Base", "Y axis", "Gantry", "X axis", "Z axis", "Spindle", "Electronics"];
 
-function PartsTab({ bom }: { bom: Bom }) {
+function BomTab({ bom }: { bom: Bom }) {
   const byGroup = new Map<Group, BomLine[]>();
   for (const l of bom.lines) byGroup.set(l.group, [...(byGroup.get(l.group) ?? []), l]);
-  const unpricedNames = bom.lines.filter((l) => l.total === null).map((l) => l.name);
   return (
-    <div className="tab-body">
-      <div className="bom-total">
-        <div>
-          <span className="kpi-label">Priced parts</span>
-          <span className="kpi-value">{money(bom.total)}</span>
-        </div>
-        <button className="ghost" onClick={() => downloadCsv(bom)}>
-          Download CSV
+    <div className="pane-body">
+      <div className="bom-head">
+        <Readout label="Priced total" value={money(bom.total)} unit="USD" sub={`${bom.lines.length} lines · read ${PRICES_READ}`} />
+        <button className="btn" onClick={() => downloadCsv(bom)}>
+          Export CSV
         </button>
       </div>
-      {unpricedNames.length > 0 && (
-        <p className="aside warn-text">
-          The total is a floor: {unpricedNames.length} lines have no sourced price yet ({unpricedNames.slice(0, 3).join("; ")}
-          {unpricedNames.length > 3 ? "; …" : ""}). Prices read 27 Sep 2026, before shipping and tax.
+      {bom.unpriced > 0 && (
+        <p className="banner warn">
+          <span className="code">WARN</span>
+          Total is a floor: {bom.unpriced} lines have no sourced price. Single-unit USD before shipping and tax.
         </p>
       )}
       {GROUPS.filter((g) => byGroup.has(g)).map((g) => {
         const lines = byGroup.get(g)!;
         const sub = lines.reduce((s, l) => s + (l.total ?? 0), 0);
         return (
-          <section key={g} className="block bom-group">
-            <div className="block-head">
-              <h3>{g}</h3>
-              <span className="num">{money(sub)}</span>
-            </div>
+          <Block key={g} title={g} meta={<span className="meta mono">{money(sub)}</span>}>
             <ul className="bom">
               {lines.map((l) => (
                 <li key={l.sku}>
-                  <div className="bom-main">
-                    <a href={l.offer.url} target="_blank" rel="noreferrer" title={`${l.offer.vendor}${l.offer.note ? ` · ${l.offer.note}` : ""}`}>
+                  <div className="bom-line">
+                    <span className="bom-qty mono">{l.unit === "each" ? `${l.qty}×` : `${l.qty} ${l.unit}`}</span>
+                    <a className="bom-name" href={l.offer.url} target="_blank" rel="noreferrer" title={`${l.offer.vendor}${l.offer.note ? ` · ${l.offer.note}` : ""}`}>
                       {l.name}
                     </a>
-                    <span className="num">{l.total === null ? <span className="faint">unpriced</span> : money(l.total, true)}</span>
+                    <span className={`bom-total mono ${l.total === null ? "dim" : ""}`}>{l.total === null ? "—" : money(l.total, true)}</span>
                   </div>
-                  <div className="bom-sub">
+                  <div className="bom-meta">
+                    <span className="mono">{l.sku}</span>
                     <span>
-                      {l.unit === "each" ? `${l.qty} ×` : `${l.qty} ${l.unit}`}
-                      {l.offer.price !== null && l.offer.price > 0 ? ` @ ${money(l.offer.price, true)}${l.unit === "each" ? "" : `/${l.unit}`}` : ""}
+                      {l.offer.vendor}
+                      {l.offer.price !== null && l.offer.price > 0 ? ` · ${money(l.offer.price, true)}${l.unit === "each" ? "" : `/${l.unit}`}` : ""}
                       {l.cutFee > 0 ? ` + ${money(l.cutFee, true)} cuts` : ""}
                     </span>
-                    <span>{l.offer.vendor}</span>
                   </div>
-                  {l.cuts.length > 0 && <div className="bom-cuts">Cut: {cutList(l.cuts)} mm</div>}
+                  {l.cuts.length > 0 && <div className="bom-cuts mono">CUT {cutList(l.cuts)} mm</div>}
                   {l.offer.note && <div className="bom-note">{l.offer.note}</div>}
                 </li>
               ))}
             </ul>
-          </section>
+          </Block>
         );
       })}
     </div>
