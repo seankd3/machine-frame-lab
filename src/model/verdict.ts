@@ -12,67 +12,54 @@ export interface BuildVerdict {
 }
 
 export function getBuildVerdict(analysis: ScenarioAnalysis): BuildVerdict {
-  const dynamicUm = analysis.dynamicDeflectionM * 1e6;
-  const firstModeHz = analysis.beam.frequenciesHz[0] ?? 0;
-  const margin = analysis.modalMarginPct;
-  const resonanceWatch = margin < 18 || analysis.dynamicAmplification > 2.2;
-  const stiffEnough = dynamicUm <= 35 && firstModeHz >= 250;
-  const usable = dynamicUm <= 85 && firstModeHz >= 140;
+  const controlling = analysis.controllingCriterion;
+  const failures = analysis.criteria.filter((criterion) => criterion.status === "fail");
+  const watches = analysis.criteria.filter((criterion) => criterion.status === "watch");
 
-  if (stiffEnough && !resonanceWatch) {
+  if (failures.length === 0 && watches.length === 0) {
     return {
       tone: "ready",
       label: "Buildable",
-      headline: "Good candidate for the current machine load",
-      summary: "Deflection and modal spacing are within target ranges for this load case.",
+      headline: "Passes the selected preliminary limits",
+      summary: "Dynamic deflection, first mode, and modal spacing are inside the editable criteria.",
       nextMove: "Review weight, cost, and rail mounting before ordering material.",
-      reasons: [
-        `${formatUm(dynamicUm)} dynamic deflection`,
-        `${formatHz(firstModeHz)} first mode`,
-        `${margin.toFixed(0)}% modal margin`,
-      ],
+      reasons: analysis.criteria.map((criterion) => `${criterion.label}: ${criterion.summary}`),
     };
   }
 
-  if (usable) {
+  if (failures.length === 0) {
     return {
       tone: "marginal",
-      label: resonanceWatch ? "Resonance caution" : "Marginal",
-      headline: resonanceWatch
-        ? "Marginal for aluminum cutting due to modal spacing"
-        : "Marginal for light aluminum work",
-      summary: resonanceWatch
-        ? "Deflection is workable, but a cutting excitation is close to a structural mode."
-        : "The frame is usable, but stiffness reserve is limited for heavier passes.",
-      nextMove: resonanceWatch
-        ? "Move the tooth-passing frequency away with spindle speed, flute count, shorter span, or a taller profile."
-        : "Try a taller extrusion, shorter span, or dual rails before stepping up cutting force.",
-      reasons: [
-        `${formatUm(dynamicUm)} dynamic deflection`,
-        `${formatHz(firstModeHz)} first mode`,
-        `${margin.toFixed(0)}% modal margin`,
-      ],
+      label: "Watch",
+      headline: `${controlling?.label ?? "One criterion"} is close to its limit`,
+      summary: "No selected limit is failing, but the controlling criterion has limited reserve.",
+      nextMove: nextMoveFor(controlling?.id),
+      reasons: analysis.criteria.map((criterion) => `${criterion.label}: ${criterion.summary}`),
     };
   }
 
   return {
     tone: "blocked",
-    label: "Too flexible",
-    headline: "Not recommended as a machine-tool beam as configured",
-    summary: "This stack is likely to chatter or lose accuracy under the selected machine-tool load.",
-    nextMove: "Shorten the span, rotate to the stronger axis, step up the profile, or redesign around a heavier base member.",
-    reasons: [
-      `${formatUm(dynamicUm)} dynamic deflection`,
-      `${formatHz(firstModeHz)} first mode`,
-      `${margin.toFixed(0)}% modal margin`,
-    ],
+    label: "Fails limit",
+    headline: `${controlling?.label ?? "A criterion"} controls the design`,
+    summary: "At least one selected preliminary engineering criterion is outside the configured limit.",
+    nextMove: nextMoveFor(controlling?.id),
+    reasons: analysis.criteria.map((criterion) => `${criterion.label}: ${criterion.summary}`),
   };
 }
 
-function formatUm(value: number) {
-  return `${value.toFixed(value >= 100 ? 0 : 1)} um`;
-}
+function nextMoveFor(id?: ScenarioAnalysis["criteria"][number]["id"]) {
+  if (id === "dynamic-deflection") {
+    return "Reduce span or cutting force, rotate to the stronger axis, add section depth, or increase rail contribution.";
+  }
 
-function formatHz(value: number) {
-  return `${value.toFixed(value >= 100 ? 0 : 1)} Hz`;
+  if (id === "first-mode") {
+    return "Raise stiffness-to-mass ratio with a shorter span, taller profile, lighter moving mass, or stiffer support condition.";
+  }
+
+  if (id === "modal-separation") {
+    return "Move tooth-pass RPM away from the nearest mode, change flute count, or shift the structure with stiffness and mass changes.";
+  }
+
+  return "Review the controlling limit before using this design as a machine-tool beam.";
 }
