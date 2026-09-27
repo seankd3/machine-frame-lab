@@ -2,7 +2,6 @@ import { fills } from "../data/materials";
 import { cutPresets } from "../data/loadPresets";
 import { rails } from "../data/rails";
 import type { Analysis } from "../model/analysis";
-import type { Design } from "../model/design";
 import { Group, NumberField, Segmented, type Update } from "./ControlField";
 
 const counts = (slots: number) => Array.from({ length: slots + 1 }, (_, n) => ({ value: n, label: String(n) }));
