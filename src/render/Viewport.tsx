@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import type { Piece } from "../geometry/parts";
-import type { Part } from "../machine/assembly";
+import type { Axis, Part } from "../machine/assembly";
 import type { Compiled } from "../machine/compile";
 import { createMaterials } from "./materials";
 
@@ -24,12 +24,32 @@ const piecesOf = (part: Part) => {
   return pieces;
 };
 
-export function Viewport({ compiled, onPick }: { compiled: Compiled; onPick?: (part: Part | null) => void }) {
+/** Axis positions relative to the compiled pose (mm): gantry and carriage centred, Z down. */
+export type Jog = Record<Axis, number>;
+
+/** A part's placement with the axes it rides moved to the jog position. */
+function jogged(part: Part, jog: Jog, out: THREE.Matrix4) {
+  out.fromArray(part.matrix);
+  for (const axis of part.rides) {
+    const e = out.elements;
+    e[12 + "xyz".indexOf(axis)] += jog[axis];
+  }
+  return out;
+}
+
+interface ViewportProps {
+  compiled: Compiled;
+  jog: Jog;
+  picked: Part | null;
+  onPick?: (part: Part | null) => void;
+}
+
+export function Viewport({ compiled, jog, picked, onPick }: ViewportProps) {
   const { outer } = compiled.d;
   const radius = Math.hypot(outer.x, outer.y, outer.z) / 1000;
   return (
     <Canvas
-      shadows
+      shadows="percentage"
       style={{ position: "absolute", inset: 0 }}
       dpr={[1, 2]}
       gl={{ antialias: false, preserveDrawingBuffer: true }}
@@ -39,7 +59,8 @@ export function Viewport({ compiled, onPick }: { compiled: Compiled; onPick?: (p
       <color attach="background" args={["#1b1f24"]} />
       <Studio radius={radius} />
       <group scale={0.001} position={[0, -compiled.d.baseL / 2000, 0]}>
-        <Machine compiled={compiled} onPick={onPick} />
+        <Machine compiled={compiled} jog={jog} onPick={onPick} />
+        {picked && <Highlight part={picked} jog={jog} />}
       </group>
       <ContactShadows position={[0, 0, 0.001]} rotation={[Math.PI / 2, 0, 0]} scale={radius * 3} resolution={1024} blur={2.4} opacity={0.65} far={1.2} />
       <Floor />
@@ -107,7 +128,7 @@ function Floor() {
   );
 }
 
-function Machine({ compiled, onPick }: { compiled: Compiled; onPick?: (part: Part | null) => void }) {
+function Machine({ compiled, jog, onPick }: { compiled: Compiled; jog: Jog; onPick?: (part: Part | null) => void }) {
   const materials = useMemo(createMaterials, []);
   const batches = useMemo(() => {
     const byShape = new Map<string, Part[]>();
@@ -125,22 +146,30 @@ function Machine({ compiled, onPick }: { compiled: Compiled; onPick?: (part: Par
   return (
     <>
       {batches.map((b) => (
-        <Batch key={b.key} piece={b.piece} parts={b.parts} material={materials[b.piece.look]} onPick={onPick} />
+        <Batch key={b.key} piece={b.piece} parts={b.parts} jog={jog} material={materials[b.piece.look]} onPick={onPick} />
       ))}
     </>
   );
 }
 
-function Batch({ piece, parts, material, onPick }: { piece: Piece; parts: Part[]; material: THREE.Material; onPick?: (part: Part | null) => void }) {
+interface BatchProps {
+  piece: Piece;
+  parts: Part[];
+  jog: Jog;
+  material: THREE.Material;
+  onPick?: (part: Part | null) => void;
+}
+
+function Batch({ piece, parts, jog, material, onPick }: BatchProps) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const invalidate = useThree((s) => s.invalidate);
   useLayoutEffect(() => {
     const m = new THREE.Matrix4();
-    parts.forEach((part, i) => mesh.current!.setMatrixAt(i, m.fromArray(part.matrix)));
+    parts.forEach((part, i) => mesh.current!.setMatrixAt(i, jogged(part, jog, m)));
     mesh.current!.instanceMatrix.needsUpdate = true;
     mesh.current!.computeBoundingSphere();
     invalidate();
-  }, [parts, invalidate]);
+  }, [parts, jog, invalidate]);
   useEffect(() => () => mesh.current?.dispose(), []);
   const small = piece.geometry.boundingSphere && piece.geometry.boundingSphere.radius < 12;
   return (
@@ -154,5 +183,20 @@ function Batch({ piece, parts, material, onPick }: { piece: Piece; parts: Part[]
         if (event.instanceId !== undefined) onPick?.(parts[event.instanceId]);
       }}
     />
+  );
+}
+
+const highlightMaterial = new THREE.MeshBasicMaterial({ color: "#4d9cff", transparent: true, opacity: 0.45, depthTest: false });
+
+/** The picked part drawn again on top, tinted, so it reads through anything in front. */
+function Highlight({ part, jog }: { part: Part; jog: Jog }) {
+  const matrix = useMemo(() => jogged(part, jog, new THREE.Matrix4()), [part, jog]);
+  const pieces = piecesOf(part);
+  return (
+    <group matrix={matrix} matrixAutoUpdate={false}>
+      {pieces.map((piece, i) => (
+        <mesh key={i} geometry={piece.geometry} material={highlightMaterial} renderOrder={10} />
+      ))}
+    </group>
   );
 }

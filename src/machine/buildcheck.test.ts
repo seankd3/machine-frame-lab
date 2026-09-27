@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { analyze } from "./analyze";
 import { bom } from "./bom";
 import { compile } from "./compile";
 import { checks } from "./checks";
@@ -63,5 +64,19 @@ describe("costing", () => {
     expect(full.motion.x.currentShare).toBeCloseTo(5.6 / Math.SQRT2 / 4.2, 3);
     expect(starved.motion.x.currentShare).toBeCloseTo(4.2 / Math.SQRT2 / 4.2, 3);
     expect(starved.motion.x.accelMs2).toBeLessThan(full.motion.x.accelMs2);
+  });
+});
+
+describe("analysis", () => {
+  it("returns plain data that survives the trip from a worker", () => {
+    const result = analyze(presets[1].machine);
+    if (!result.ok) throw new Error(result.error);
+    expect(structuredClone(result)).toEqual(result);
+    const { modes } = result.analysis;
+    expect(modes.length).toBe(4);
+    for (const m of modes) {
+      expect(m.tool.x + m.tool.y + m.tool.z).toBeCloseTo(1, 6);
+      expect(m.budget.reduce((s, b) => s + b.share, 0)).toBeGreaterThan(0.95);
+    }
   });
 });

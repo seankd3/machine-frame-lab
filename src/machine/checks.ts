@@ -49,11 +49,12 @@ export function checks(c: Compiled, perf: Performance, firstModeHz: number): Fin
   if (firstModeHz < MIN_MODE_HZ) {
     out.push({
       severity: "warn",
-      title: `First frame mode at ${firstModeHz.toFixed(0)} Hz`,
+      title: `First frame mode at ${firstModeHz.toFixed(1)} Hz`,
       detail: `Below ${MIN_MODE_HZ} Hz the frame rings on direction changes and chatters at common tooth-pass rates. Lighter moving mass or a deeper gantry beam raises it.`,
     });
   }
 
+  const slow: string[] = [];
   for (const axis of AXES) {
     const mo = perf.motion[axis];
     const motor = axis === "x" ? r.mx : axis === "y" ? r.my : r.mz;
@@ -67,16 +68,24 @@ export function checks(c: Compiled, perf: Performance, firstModeHz: number): Fin
     if (mo.accelMs2 <= 0) {
       out.push({ severity: "bad", title: `${axis.toUpperCase()} axis cannot lift its load`, detail: `The motor cannot hold the moving mass against gravity. Use a finer lead or a larger motor.` });
     } else if (mo.rapidMmMin < SLOW_RAPID) {
-      out.push({ severity: "info", title: `${axis.toUpperCase()} rapids limited to ${Math.round(mo.rapidMmMin).toLocaleString()} mm/min`, detail: `Set by ${mo.limitedBy}.` });
+      slow.push(`${axis.toUpperCase()} ${(mo.rapidMmMin / 1000).toFixed(1)} m/min (${mo.limitedBy})`);
     }
+  }
+  if (slow.length) {
+    out.push({ severity: "info", title: `Rapids under ${SLOW_RAPID / 1000} m/min`, detail: `${slow.join("; ")}. A coarser lead or a belt trades some stiffness for speed.` });
   }
 
   const screwLen: Record<string, number> = { x: d.beamLen - 20, y: d.baseL - 30, z: d.zp1 - d.zp0 - 30 };
-  for (const axis of AXES) {
+  const long = AXES.filter((axis) => {
     const drive = axis === "x" ? r.dx : axis === "y" ? r.dy : r.dz;
-    if (drive.kind === "ballscrew" && drive.kit.offer.price !== null && screwLen[axis] > KIT_LENGTH_MM) {
-      out.push({ severity: "info", title: `${axis.toUpperCase()} screw is ${Math.round(screwLen[axis])} mm`, detail: `Kit prices are for ${KIT_LENGTH_MM} mm screws; budget more for the longer one.` });
-    }
+    return drive.kind === "ballscrew" && drive.kit.offer.price !== null && screwLen[axis] > KIT_LENGTH_MM;
+  });
+  if (long.length) {
+    out.push({
+      severity: "info",
+      title: `Screws over ${KIT_LENGTH_MM} mm`,
+      detail: `${long.map((a) => `${a.toUpperCase()} ${Math.round(screwLen[a])} mm`).join(", ")}. Kit prices are for ${KIT_LENGTH_MM} mm screws; budget more for longer ones.`,
+    });
   }
 
   if (m.frame.joinery === "brackets" && r.frame.kind === "tube") {

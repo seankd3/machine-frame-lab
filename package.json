@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
-    "build:pages": "GITHUB_PAGES=true vite build --outDir docs",
+    "build:pages": "rm -rf docs/assets docs/index.html && GITHUB_PAGES=true vite build --outDir docs --emptyOutDir false",
     "preview": "vite preview --host 0.0.0.0",
     "test": "vitest run",
     "check": "tsc --noEmit && vitest run"

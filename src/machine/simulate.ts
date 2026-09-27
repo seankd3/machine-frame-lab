@@ -81,6 +81,24 @@ export function modes(c: Compiled, solved: Solved = solve(c), count = 4): FrameM
   return solveModes(solved, count, 30);
 }
 
+export interface ModeSummary {
+  hz: number;
+  /** Share of the tool's translation along each axis. */
+  tool: Record<Axis, number>;
+  /** Subsystems holding the mode's strain energy, largest first. */
+  budget: Array<{ name: string; share: number }>;
+}
+
+/** What each mode does: where its strain energy sits and how it moves the tool. */
+export function describeModes(c: Compiled, found: FrameMode[]): ModeSummary[] {
+  const tool = c.asm.marks.get("tool")!;
+  return found.map(({ hz, shape }) => {
+    const t = AXES.map((_, d) => shape[tool * 6 + d] ** 2);
+    const sum = t.reduce((a, b) => a + b, 0) || 1;
+    return { hz, tool: { x: t[0] / sum, y: t[1] / sum, z: t[2] / sum }, budget: energyBudget(c, shape) };
+  });
+}
+
 /**
  * Strain energy per subsystem under a unit tool load. Energy ½uᵀKu equals
  * ½·compliance, so each subsystem's share is its share of the deflection.
